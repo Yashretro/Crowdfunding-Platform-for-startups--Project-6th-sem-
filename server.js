@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { existsSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
@@ -11,15 +13,27 @@ const __dirname = dirname(__filename);
 const dataDir = join(__dirname, 'server', 'data');
 const dataFile = join(dataDir, 'store.json');
 
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+
 const defaultStore = {
   users: [
+    {
+      id: 'admin-1',
+      firstName: 'Admin',
+      lastName: 'User',
+      email: 'admin@example.com',
+      password: bcrypt.hashSync('Admin@123', 8),
+      userType: 'admin',
+      role: 'admin',
+    },
     {
       id: 'demo-founder',
       firstName: 'Demo',
       lastName: 'Founder',
       email: 'demo@example.com',
-      password: 'demo123',
+      password: bcrypt.hashSync('demo123', 8),
       userType: 'founder',
+      role: 'founder',
     },
   ],
   projects: [
@@ -118,14 +132,40 @@ function publicUser(user) {
 }
 
 function createToken(userId) {
-  return `demo-token:${userId}`;
+  return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: '7d' });
 }
 
 function getAuthUser(req, store) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const userId = token.startsWith('demo-token:') ? token.slice('demo-token:'.length) : '';
-  return store.users.find((user) => user.id === userId) || null;
+  if (!token) return null;
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    const userId = payload && payload.sub ? payload.sub : null;
+    return store.users.find((user) => user.id === userId) || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function requireAuth(req, res, next) {
+  readStore().then((store) => {
+    const user = getAuthUser(req, store);
+    if (!user) return res.status(401).json({ message: 'Unauthorized.' });
+    req.user = user;
+    next();
+  }).catch((err) => res.status(500).json({ message: 'Server error.' }));
+}
+
+function requireRole(role) {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: 'Unauthorized.' });
+    if (user.role !== role && user.userType !== role) {
+      return res.status(403).json({ message: 'Forbidden.' });
+    }
+    next();
+  };
 }
 
 app.get('/api/health', (_req, res) => {
@@ -146,13 +186,15 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(409).json({ message: 'User already exists.' });
   }
 
+  const hashed = bcrypt.hashSync(password, 8);
   const newUser = {
     id: randomUUID(),
     firstName,
     lastName,
     email,
-    password,
+    password: hashed,
     userType,
+    role: userType,
   };
 
   store.users.unshift(newUser);
@@ -164,39 +206,25 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
   const store = await readStore();
-  const user = store.users.find((item) => item.email.toLowerCase() === String(email).toLowerCase() && item.password === password);
-
-  if (!user) {
-    return res.status(401).json({ message: 'Invalid email or password.' });
-  }
-
+  const user = store.users.find((item) => item.email.toLowerCase() === String(email).toLowerCase());
+  if (!user) return res.status(401).json({ message: 'Invalid email or password.' });
+  const match = bcrypt.compareSync(password, user.password);
+  if (!match) return res.status(401).json({ message: 'Invalid email or password.' });
   return res.json({ token: createToken(user.id), user: publicUser(user) });
 });
 
-app.get('/api/users/profile', async (req, res) => {
-  const store = await readStore();
-  const user = getAuthUser(req, store);
-
-  if (!user) {
-    return res.status(401).json({ message: 'Unauthorized.' });
-  }
-
-  return res.json(publicUser(user));
+app.get('/api/users/profile', requireAuth, async (req, res) => {
+  return res.json(publicUser(req.user));
 });
 
-app.put('/api/users/profile', async (req, res) => {
+app.put('/api/users/profile', requireAuth, async (req, res) => {
   const store = await readStore();
-  const user = getAuthUser(req, store);
-
-  if (!user) {
-    return res.status(401).json({ message: 'Unauthorized.' });
-  }
-
+  const user = req.user;
   const { firstName, lastName, userType } = req.body || {};
   user.firstName = firstName ?? user.firstName;
   user.lastName = lastName ?? user.lastName;
   user.userType = userType ?? user.userType;
-
+  user.role = userType ?? user.role;
   await writeStore(store);
   return res.json(publicUser(user));
 });
@@ -233,7 +261,7 @@ app.get('/api/projects/:id', async (req, res) => {
   return res.json(project);
 });
 
-app.post('/api/projects', async (req, res) => {
+app.post('/api/projects', requireAuth, async (req, res) => {
   const store = await readStore();
   const { title, description, goal, image, category, daysLeft, featured, founder, updates } = req.body || {};
 
@@ -273,7 +301,7 @@ app.put('/api/projects/:id', async (req, res) => {
   return res.json(project);
 });
 
-app.delete('/api/projects/:id', async (req, res) => {
+app.delete('/api/projects/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const store = await readStore();
   const nextProjects = store.projects.filter((item) => item.id !== req.params.id);
 
@@ -308,7 +336,7 @@ app.get('/api/investments/:id', async (req, res) => {
   return res.json(investment);
 });
 
-app.post('/api/investments', async (req, res) => {
+app.post('/api/investments', requireAuth, async (req, res) => {
   const store = await readStore();
   const { projectId, projectTitle, amount, status } = req.body || {};
   const numericAmount = Number(amount);
@@ -357,6 +385,30 @@ app.post('/api/payments/verify', async (req, res) => {
     status: 'verified',
     verified: true,
   });
+});
+
+// Admin endpoints
+app.get('/api/admin/projects', requireAuth, requireRole('admin'), async (req, res) => {
+  const store = await readStore();
+  return res.json(store.projects);
+});
+
+app.post('/api/admin/projects/:id/approve', requireAuth, requireRole('admin'), async (req, res) => {
+  const store = await readStore();
+  const project = store.projects.find((p) => p.id === req.params.id);
+  if (!project) return res.status(404).json({ message: 'Project not found.' });
+  project.approved = true;
+  await writeStore(store);
+  return res.json(project);
+});
+
+app.post('/api/admin/projects/:id/reject', requireAuth, requireRole('admin'), async (req, res) => {
+  const store = await readStore();
+  const project = store.projects.find((p) => p.id === req.params.id);
+  if (!project) return res.status(404).json({ message: 'Project not found.' });
+  project.rejected = true;
+  await writeStore(store);
+  return res.json(project);
 });
 
 app.listen(port, async () => {

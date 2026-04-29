@@ -185,6 +185,107 @@ export default function Home() {
 
       <section className="py-20">
         <div className="section-shell">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+            <div className="lg:col-span-2 glass-strong hero-glow p-8 flex flex-col justify-between">
+              <div>
+                <p className="premium-chip-accent mb-4 w-fit">Community Proof</p>
+                <h2 className="text-4xl font-bold text-slate-900 mb-4 leading-tight">
+                  Why founders and backers choose kickscale
+                </h2>
+                <p className="text-slate-700 text-lg mb-8">
+                  A cleaner funding experience, stronger project visibility, and a polished dashboard that makes every campaign feel more trustworthy.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Active backers</p>
+                  <p className="telemetry-value">50K+</p>
+                </div>
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Campaign success</p>
+                  <p className="telemetry-value">95%</p>
+                </div>
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Avg. funding time</p>
+                  <p className="telemetry-value">3.6 days</p>
+                </div>
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Verified founders</p>
+                  <p className="telemetry-value">1.4K</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6 stagger">
+              <div className="glass-panel p-6 rounded-2xl hover-lift">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-slate-900 font-semibold">Aarav Mehta</p>
+                    <p className="text-sm text-slate-500">Founder, SolarGrid Mini</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white flex items-center justify-center font-bold">
+                    AM
+                  </div>
+                </div>
+                <p className="text-slate-700 mb-4">
+                  “The dashboard made it easy to show traction, and the campaign page made my startup look instantly more credible.”
+                </p>
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>Raised ₹32,000</span>
+                  <span>18 days left</span>
+                </div>
+              </div>
+
+              <div className="glass-panel p-6 rounded-2xl hover-lift">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <p className="text-slate-900 font-semibold">Sara Khan</p>
+                    <p className="text-sm text-slate-500">Investor, HealthNest AI</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-white flex items-center justify-center font-bold">
+                    SK
+                  </div>
+                </div>
+                <p className="text-slate-700 mb-4">
+                  “The project cards are easy to scan, and the progress visuals make it simple to decide where to invest next.”
+                </p>
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>Backed 4 campaigns</span>
+                  <span>Top supporter</span>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 glass-panel p-6 rounded-2xl bg-white/50 border-white/70">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <p className="premium-chip mb-3 w-fit">Live Momentum</p>
+                    <h3 className="text-2xl font-bold text-slate-900">Built to feel active, credible, and investor-ready</h3>
+                  </div>
+                  <Link to="/signup" className="btn-primary w-fit">Join the Platform</Link>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                  <div className="telemetry-item">
+                    <p className="telemetry-label mb-1">New campaigns today</p>
+                    <p className="telemetry-value">14</p>
+                  </div>
+                  <div className="telemetry-item">
+                    <p className="telemetry-label mb-1">Funds deployed</p>
+                    <p className="telemetry-value">₹420K</p>
+                  </div>
+                  <div className="telemetry-item">
+                    <p className="telemetry-label mb-1">Average rating</p>
+                    <p className="telemetry-value">4.9/5</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-20">
+        <div className="section-shell">
           <div className="text-center mb-12">
             <p className="premium-chip mx-auto mb-3 w-fit">Founder Journey</p>
             <h2 className="section-title mb-3">How It Works</h2>

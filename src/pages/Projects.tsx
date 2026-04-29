@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
 import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
@@ -22,6 +22,22 @@ export default function Projects() {
   useEffect(() => {
     filterAndSortProjects();
   }, [projects, category, searchTerm, sortBy]);
+
+  const categoryCounts = useMemo(() => {
+    return projects.reduce<Record<string, number>>((counts, project) => {
+      const key = project.category;
+      counts[key] = (counts[key] || 0) + 1;
+      return counts;
+    }, {});
+  }, [projects]);
+
+  const hasActiveFilters = category !== 'all' || searchTerm.trim().length > 0 || sortBy !== 'trending';
+
+  const clearFilters = () => {
+    setCategory('all');
+    setSearchTerm('');
+    setSortBy('trending');
+  };
 
   const fetchProjects = async () => {
     try {
@@ -73,60 +89,112 @@ export default function Projects() {
         </div>
       </section>
 
-      <section className="sticky top-16 z-40 py-2">
-        <div className="section-shell py-6">
-          <div className="glass-panel reveal p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <input
-                type="text"
-                placeholder="Search projects..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="glass-input"
-              />
-            </div>
-
-            <div>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="glass-input"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {cat === 'all' ? 'All Categories' : cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="glass-input"
-              >
-                <option value="trending">Trending</option>
-                <option value="newest">Newest</option>
-                <option value="closing">Closing Soon</option>
-              </select>
-            </div>
-
-            <div className="flex items-center justify-end">
-              <span className="text-slate-700 font-medium">{filteredProjects.length} projects found</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="section-shell">
+          <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-8 items-start">
+            <aside className="glass-strong reveal p-6 sticky top-24 space-y-6">
+              <div>
+                <p className="premium-chip mb-3 w-fit">Filter Sidebar</p>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Refine your discovery</h2>
+                <p className="text-sm text-slate-600">Use quick filters to move faster through the marketplace.</p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-700">Search</label>
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="glass-input"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-700">Sort by</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="glass-input"
+                >
+                  <option value="trending">Trending</option>
+                  <option value="newest">Newest</option>
+                  <option value="closing">Closing Soon</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-slate-700">Categories</label>
+                  <button type="button" onClick={clearFilters} className="text-xs font-semibold text-sky-700 hover:underline">
+                    Clear all
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setCategory(cat)}
+                      className={`w-full flex items-center justify-between rounded-xl px-4 py-3 text-left transition ${
+                        category === cat
+                          ? 'bg-sky-600 text-white shadow-lg'
+                          : 'bg-white/35 text-slate-700 hover:bg-white/60'
+                      }`}
+                    >
+                      <span className="font-medium">{cat === 'all' ? 'All Categories' : cat}</span>
+                      <span className={`text-xs font-semibold rounded-full px-2 py-1 ${category === cat ? 'bg-white/20' : 'bg-slate-100 text-slate-600'}`}>
+                        {cat === 'all' ? projects.length : categoryCounts[cat] || 0}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="telemetry-grid">
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Projects</p>
+                  <p className="telemetry-value">{projects.length}</p>
+                </div>
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Visible</p>
+                  <p className="telemetry-value">{filteredProjects.length}</p>
+                </div>
+                <div className="telemetry-item">
+                  <p className="telemetry-label mb-1">Status</p>
+                  <p className="telemetry-value">Live</p>
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex flex-wrap gap-2">
+                  {category !== 'all' && <span className="badge-glass">Category: {category}</span>}
+                  {searchTerm && <span className="badge-glass">Search: {searchTerm}</span>}
+                  {sortBy !== 'trending' && <span className="badge-glass">Sort: {sortBy}</span>}
+                </div>
+              )}
+            </aside>
+
+            <div className="space-y-5">
+              <div className="glass-panel reveal p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <p className="text-sm text-slate-500 font-semibold uppercase tracking-[0.14em] mb-1">Marketplace View</p>
+                  <h3 className="text-2xl font-bold text-slate-900">{filteredProjects.length} projects found</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <span className="badge-glass">Trending UI</span>
+                  <span className="badge-glass">Animated cards</span>
+                  <span className="badge-glass">Fast filtering</span>
+                </div>
+              </div>
+
           {loading ? (
             <div className="text-center text-gray-600 py-12">Loading projects...</div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center text-gray-600 py-12">No projects found. Reset filters or reload the page.</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 stagger">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 stagger">
               {filteredProjects.map((project) => (
                 <div key={project.id} className="card card-race card-tilt hover-lift">
                   <img src={project.image} alt={project.title} className="w-full h-48 object-cover rounded-lg mb-4" />
@@ -165,6 +233,8 @@ export default function Projects() {
               ))}
             </div>
           )}
+            </div>
+          </div>
         </div>
       </section>
     </div>

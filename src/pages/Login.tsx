@@ -92,8 +92,16 @@ export default function Login() {
 
         <div className="mt-6 pt-6 border-t border-white/50">
           <p className="text-sm text-slate-600 mb-3">Demo Credentials:</p>
-          <p className="text-sm text-slate-700">Email: demo@example.com</p>
-          <p className="text-sm text-slate-700">Password: demo123</p>
+          <div className="mb-3">
+            <p className="text-xs font-semibold text-slate-700">Admin:</p>
+            <p className="text-sm text-slate-700">Email: admin@example.com</p>
+            <p className="text-sm text-slate-700">Password: Admin@123</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-700">Founder:</p>
+            <p className="text-sm text-slate-700">Email: demo@example.com</p>
+            <p className="text-sm text-slate-700">Password: demo123</p>
+          </div>
         </div>
       </div>
     </div>

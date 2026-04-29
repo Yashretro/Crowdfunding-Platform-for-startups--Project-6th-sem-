@@ -18,6 +18,7 @@ import Blog from './pages/Blog';
 import Contact from './pages/Contact';
 import HowItWorks from './pages/HowItWorks';
 import CreateCampaign from './pages/CreateCampaign';
+import AdminPanel from './pages/AdminPanel';
 import './App.css';
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/campaigns/new" element={<CreateCampaign />} />
+            <Route path="/admin" element={<AdminPanel />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/help" element={<HelpCenter />} />
             <Route path="/faq" element={<Faq />} />

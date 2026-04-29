@@ -1,6 +1,15 @@
 {
   "users": [
     {
+      "id": "admin-1",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@example.com",
+      "password": "$2a$08$1zjqojNq4650qwOyx/w63.e2iMHJ0zcpLXaiSoWgde9L8TTXdON2u",
+      "userType": "admin",
+      "role": "admin"
+    },
+    {
       "id": "e9346b8b-3c79-477e-ba6d-c2ff8140ae44",
       "firstName": "Yashraj",
       "lastName": "Singh",
@@ -37,7 +46,8 @@
           "date": "2026-04-02",
           "content": "Completed the second prototype validation test."
         }
-      ]
+      ],
+      "approved": true
     },
     {
       "id": "proj-2",
@@ -74,7 +84,8 @@
         "name": "Riya Singh",
         "bio": "Helping students build stronger campus communities."
       },
-      "updates": []
+      "updates": [],
+      "approved": true
     },
     {
       "id": "proj-4",

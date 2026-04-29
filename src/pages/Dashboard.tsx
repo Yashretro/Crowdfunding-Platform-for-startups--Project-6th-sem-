@@ -73,6 +73,10 @@ export default function Dashboard() {
   const totalInvested = investments.reduce((sum, investment) => sum + Number(investment.amount || 0), 0);
   const activeInvestments = investments.length;
   const returnsGenerated = totalInvested * 0.08;
+  const recentActivityCount = investments.filter((investment) => {
+    const createdAt = new Date(investment.createdAt).getTime();
+    return Date.now() - createdAt <= 7 * 24 * 60 * 60 * 1000;
+  }).length;
   const recentInvestments = [...investments]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
@@ -80,7 +84,12 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen">
       <div className="section-shell py-12">
-        <p className="premium-chip mb-4 w-fit">Performance Dashboard</p>
+        <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+          <p className="premium-chip w-fit">Performance Dashboard</p>
+          <span className="badge-glass">
+            {recentActivityCount} new updates this week
+          </span>
+        </div>
         <h1 className="text-4xl font-bold text-slate-900 mb-8">Welcome, {user.firstName}!</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -125,7 +134,10 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <h3 className="text-xl font-bold text-slate-900 mb-4">Recent Activity</h3>
+          <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+            <h3 className="text-xl font-bold text-slate-900">Recent Activity</h3>
+            <span className="badge-glass">{recentActivityCount} recent</span>
+          </div>
           {trackingLoading ? (
             <div className="text-center text-slate-600 py-8">Loading tracking activity...</div>
           ) : (

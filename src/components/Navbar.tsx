@@ -4,6 +4,9 @@ import { Link } from 'react-router-dom';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const isLoggedIn = localStorage.getItem('token');
+  const storedUser = localStorage.getItem('user');
+  const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+  const isAdmin = parsedUser && (parsedUser.role === 'admin' || parsedUser.userType === 'admin');
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -30,6 +33,7 @@ export default function Navbar() {
             
             {isLoggedIn ? (
               <>
+                {isAdmin ? <Link to="/admin" className="nav-link">Admin</Link> : null}
                 <Link to="/dashboard" className="nav-link">Dashboard</Link>
                 <Link to="/transactions" className="nav-link">Transactions</Link>
                 <button onClick={handleLogout} className="btn-primary">
@@ -61,6 +65,7 @@ export default function Navbar() {
             <Link to="/how-it-works" className="block px-4 py-2 text-slate-700 hover:bg-white/45 rounded-xl">How It Works</Link>
             {isLoggedIn ? (
               <>
+                {isAdmin ? <Link to="/admin" className="block px-4 py-2 text-slate-700 hover:bg-white/45 rounded-xl">Admin</Link> : null}
                 <Link to="/dashboard" className="block px-4 py-2 text-slate-700 hover:bg-white/45 rounded-xl">Dashboard</Link>
                 <Link to="/transactions" className="block px-4 py-2 text-slate-700 hover:bg-white/45 rounded-xl">Transactions</Link>
                 <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sky-700 font-semibold hover:bg-white/45 rounded-xl">
