@@ -84,7 +84,6 @@ export default function Dashboard() {
         <h1 className="text-4xl font-bold text-slate-900 mb-8">Welcome, {user.firstName}!</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {/* Profile Card */}
           <div className="card">
             <h3 className="text-xl font-bold text-slate-900 mb-4">My Profile</h3>
             <p className="text-slate-700 mb-2"><strong>Name:</strong> {user.firstName} {user.lastName}</p>
@@ -93,7 +92,6 @@ export default function Dashboard() {
             <button className="btn-primary">Edit Profile</button>
           </div>
 
-          {/* Quick Stats */}
           <div className="card">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Quick Stats</h3>
             <div className="space-y-3">
@@ -103,7 +101,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="card">
             <h3 className="text-xl font-bold text-slate-900 mb-4">Quick Actions</h3>
             <div className="space-y-2">
@@ -127,7 +124,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
         <div className="card">
           <h3 className="text-xl font-bold text-slate-900 mb-4">Recent Activity</h3>
           {trackingLoading ? (

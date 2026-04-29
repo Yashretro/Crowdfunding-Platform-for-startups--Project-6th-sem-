@@ -8,7 +8,6 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 });
-// Add token to requests if it
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -17,7 +16,6 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Projects API
 export const projectService = {
   getAll: (filters?: any) => apiClient.get('/projects', { params: filters }),
   getById: (id: string) => apiClient.get(`/projects/${id}`),
@@ -26,7 +24,6 @@ export const projectService = {
   delete: (id: string) => apiClient.delete(`/projects/${id}`),
 };
 
-// Users API
 export const userService = {
   register: (data: any) => apiClient.post('/auth/register', data),
   login: (data: any) => apiClient.post('/auth/login', data),
@@ -34,7 +31,6 @@ export const userService = {
   updateProfile: (data: any) => apiClient.put('/users/profile', data),
 };
 
-// Investments API
 export const investmentService = {
   getAll: () => apiClient.get('/investments'),
   getById: (id: string) => apiClient.get(`/investments/${id}`),
@@ -42,7 +38,6 @@ export const investmentService = {
   getProjectInvestments: (projectId: string) => apiClient.get(`/projects/${projectId}/investments`),
 };
 
-// Payments API
 export const paymentService = {
   initiatePayment: (data: any) => apiClient.post('/payments/initiate', data),
   verifyPayment: (data: any) => apiClient.post('/payments/verify', data),

@@ -115,7 +115,6 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
       <div className="relative h-96 overflow-hidden">
         <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
@@ -129,18 +128,14 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
-            {/* Description */}
             <div className="card mb-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">About This Project</h2>
               <p className="text-slate-700 whitespace-pre-wrap">{project.description}</p>
             </div>
 
-            {/* Updates */}
             <div className="card">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Updates</h2>
               {project.updates && project.updates.length > 0 ? (
@@ -158,13 +153,10 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div>
-            {/* Investment Card */}
             <div className="card mb-8 sticky top-20">
               <h3 className="text-2xl font-bold text-slate-900 mb-4">Invest Now</h3>
 
-              {/* Funding Progress */}
               <div className="mb-6">
                 <div className="flex justify-between mb-2">
                   <span className="text-lg font-bold text-slate-900">₹{project.raised.toLocaleString('en-IN')}</span>
@@ -179,7 +171,6 @@ export default function ProjectDetail() {
                 <p className="text-sm text-slate-600">of ₹{project.goal.toLocaleString('en-IN')} goal</p>
               </div>
 
-              {/* Stats */}
               <div className="grid grid-cols-2 gap-4 mb-6 pb-6 border-b border-white/55">
                 <div>
                   <p className="text-2xl font-bold text-slate-900">{project.daysLeft}</p>
@@ -191,7 +182,6 @@ export default function ProjectDetail() {
                 </div>
               </div>
 
-              {/* Investment Form */}
               <div className="space-y-3 mb-6">
                 <input
                   type="number"
@@ -209,7 +199,6 @@ export default function ProjectDetail() {
                 </button>
               </div>
 
-              {/* Founder Info */}
               <div className="pt-4">
                 <p className="text-sm text-slate-600 mb-2">Founded by</p>
                 <p className="font-semibold text-slate-900">{project.founder?.name || 'Founder Name'}</p>
@@ -217,7 +206,6 @@ export default function ProjectDetail() {
               </div>
             </div>
 
-            {/* Share Card */}
             <div className="card">
               <h3 className="text-lg font-bold text-slate-900 mb-4">Share</h3>
               <div className="flex gap-2">

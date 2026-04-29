@@ -6,7 +6,6 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="glass-panel px-6 py-8 md:px-8 md:py-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Brand */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
@@ -17,7 +16,6 @@ export default function Footer() {
             <p className="text-slate-600">Empowering startups through community funding</p>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h4 className="font-semibold mb-4 text-slate-900">Quick Links</h4>
             <ul className="space-y-2 text-slate-600">
@@ -28,7 +26,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Resources */}
           <div>
             <h4 className="font-semibold mb-4 text-slate-900">Resources</h4>
             <ul className="space-y-2 text-slate-600">
@@ -39,7 +36,6 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
           <div>
             <h4 className="font-semibold mb-4 text-slate-900">Legal</h4>
             <ul className="space-y-2 text-slate-600">

@@ -1,6 +1,3 @@
-/* App Styles - All main styling is handled by Tailwind CSS */
-
-/* Optional: Add custom animations or keyframes here */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -16,7 +13,6 @@
   animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Optional: Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }

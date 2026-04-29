@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
+import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  goal: number;
-  raised: number;
-  image: string;
-  category: string;
-  daysLeft: number;
-}
+type Project = DefaultProject;
 
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -21,7 +13,7 @@ export default function Projects() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('trending');
 
-  const categories = ['all', 'Technology', 'Healthcare', 'Retail', 'Finance', 'Education', 'Entertainment'];
+  const categories = ['all', 'Clean Tech', 'Health Tech', 'EdTech', 'Food Tech', 'Entertainment', 'Finance'];
 
   useEffect(() => {
     fetchProjects();
@@ -34,9 +26,11 @@ export default function Projects() {
   const fetchProjects = async () => {
     try {
       const response = await projectService.getAll();
-      setProjects(response.data);
+      const apiProjects = Array.isArray(response.data) ? response.data : [];
+      setProjects(apiProjects.length > 0 ? apiProjects : defaultProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
+      setProjects(defaultProjects);
     } finally {
       setLoading(false);
     }
@@ -45,12 +39,10 @@ export default function Projects() {
   const filterAndSortProjects = () => {
     let filtered = [...projects];
 
-    // Filter by category
     if (category !== 'all') {
       filtered = filtered.filter(p => p.category.toLowerCase() === category.toLowerCase());
     }
 
-    // Search
     if (searchTerm) {
       filtered = filtered.filter(p =>
         p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -58,7 +50,6 @@ export default function Projects() {
       );
     }
 
-    // Sort
     if (sortBy === 'trending') {
       filtered.sort((a, b) => b.raised - a.raised);
     } else if (sortBy === 'newest') {
@@ -72,7 +63,6 @@ export default function Projects() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <section className="py-8">
         <div className="section-shell">
           <div className="glass-strong reveal p-6 sm:p-8">
@@ -83,11 +73,9 @@ export default function Projects() {
         </div>
       </section>
 
-      {/* Filters and Search */}
       <section className="sticky top-16 z-40 py-2">
         <div className="section-shell py-6">
           <div className="glass-panel reveal p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
             <div>
               <input
                 type="text"
@@ -98,7 +86,6 @@ export default function Projects() {
               />
             </div>
 
-            {/* Category Filter */}
             <div>
               <select
                 value={category}
@@ -113,7 +100,6 @@ export default function Projects() {
               </select>
             </div>
 
-            {/* Sort */}
             <div>
               <select
                 value={sortBy}
@@ -126,7 +112,6 @@ export default function Projects() {
               </select>
             </div>
 
-            {/* Results */}
             <div className="flex items-center justify-end">
               <span className="text-slate-700 font-medium">{filteredProjects.length} projects found</span>
             </div>
@@ -134,13 +119,12 @@ export default function Projects() {
         </div>
       </section>
 
-      {/* Projects Grid */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {loading ? (
             <div className="text-center text-gray-600 py-12">Loading projects...</div>
           ) : filteredProjects.length === 0 ? (
-            <div className="text-center text-gray-600 py-12">No projects found. Try adjusting your filters.</div>
+            <div className="text-center text-gray-600 py-12">No projects found. Reset filters or reload the page.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 stagger">
               {filteredProjects.map((project) => (

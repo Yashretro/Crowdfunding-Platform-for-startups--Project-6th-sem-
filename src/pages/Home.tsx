@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
+import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
 
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  goal: number;
-  raised: number;
-  image: string;
-  category: string;
-  daysLeft: number;
-}
+type Project = DefaultProject;
 
 export default function Home() {
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
@@ -24,9 +16,11 @@ export default function Home() {
   const fetchFeaturedProjects = async () => {
     try {
       const response = await projectService.getAll({ featured: true, limit: 6 });
-      setFeaturedProjects(response.data);
+      const apiProjects = Array.isArray(response.data) ? response.data : [];
+      setFeaturedProjects(apiProjects.length > 0 ? apiProjects : defaultProjects.slice(0, 3));
     } catch (error) {
       console.error('Error fetching projects:', error);
+      setFeaturedProjects(defaultProjects.slice(0, 3));
     } finally {
       setLoading(false);
     }
@@ -34,7 +28,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
       <section className="py-16 sm:py-20">
         <div className="section-shell">
           <div className="glass-strong hero-glow reveal p-6 sm:p-10 lg:p-12">
@@ -106,7 +99,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Stats Section */}
       <section className="py-16">
         <div className="section-shell">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 stagger">
@@ -130,7 +122,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Projects Section */}
       <section className="py-20">
         <div className="section-shell">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12 gap-4">
@@ -192,7 +183,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How It Works Section */}
       <section className="py-20">
         <div className="section-shell">
           <div className="text-center mb-12">
@@ -255,7 +245,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20">
         <div className="section-shell text-center">
           <div className="glass-panel reveal py-12 px-6 sm:px-10">

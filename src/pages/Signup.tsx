@@ -9,7 +9,7 @@ export default function Signup() {
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'investor', // 'investor' or 'founder'
+    userType: 'investor',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,7 +26,6 @@ export default function Signup() {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;

@@ -90,7 +90,6 @@ export default function Login() {
           </Link>
         </p>
 
-        {/* Demo Credentials */}
         <div className="mt-6 pt-6 border-t border-white/50">
           <p className="text-sm text-slate-600 mb-3">Demo Credentials:</p>
           <p className="text-sm text-slate-700">Email: demo@example.com</p>
