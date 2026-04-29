@@ -1,0 +1,176 @@
+{
+  "users": [
+    {
+      "id": "e9346b8b-3c79-477e-ba6d-c2ff8140ae44",
+      "firstName": "Yashraj",
+      "lastName": "Singh",
+      "email": "lskjjjsjs@gmail.com",
+      "password": "12345678",
+      "userType": "founder"
+    },
+    {
+      "id": "demo-founder",
+      "firstName": "Demo",
+      "lastName": "Founder",
+      "email": "demo@example.com",
+      "password": "demo123",
+      "userType": "founder"
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-1",
+      "title": "SolarGrid Mini",
+      "description": "Portable solar charging system for remote teams and travel kits.",
+      "goal": 50000,
+      "raised": 32000,
+      "image": "https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=1200&q=80",
+      "category": "Clean Tech",
+      "daysLeft": 18,
+      "featured": true,
+      "founder": {
+        "name": "Aarav Mehta",
+        "bio": "Building compact clean-energy products for daily use."
+      },
+      "updates": [
+        {
+          "date": "2026-04-02",
+          "content": "Completed the second prototype validation test."
+        }
+      ]
+    },
+    {
+      "id": "proj-2",
+      "title": "HealthNest AI",
+      "description": "AI-assisted health dashboard that helps clinics triage routine patient queries.",
+      "goal": 80000,
+      "raised": 50000,
+      "image": "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80",
+      "category": "Health Tech",
+      "daysLeft": 25,
+      "featured": true,
+      "founder": {
+        "name": "Sara Khan",
+        "bio": "Focused on practical AI for frontline healthcare."
+      },
+      "updates": [
+        {
+          "date": "2026-04-01",
+          "content": "Pilot trial started with two partner clinics."
+        }
+      ]
+    },
+    {
+      "id": "proj-3",
+      "title": "CampusLoop",
+      "description": "Student community platform for events, mentorship, and project collaboration.",
+      "goal": 25000,
+      "raised": 59000,
+      "image": "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+      "category": "EdTech",
+      "daysLeft": 31,
+      "featured": false,
+      "founder": {
+        "name": "Riya Singh",
+        "bio": "Helping students build stronger campus communities."
+      },
+      "updates": []
+    },
+    {
+      "id": "proj-4",
+      "title": "FoodFlow",
+      "description": "Smart logistics app for local restaurants to reduce delivery delays and food waste.",
+      "goal": 40000,
+      "raised": 18500,
+      "image": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80",
+      "category": "Food Tech",
+      "daysLeft": 22,
+      "featured": true,
+      "founder": {
+        "name": "Kabir Arora",
+        "bio": "Building efficient tools for local food businesses."
+      },
+      "updates": [
+        {
+          "date": "2026-04-05",
+          "content": "Restaurant pilot partners started using the logistics dashboard."
+        }
+      ]
+    },
+    {
+      "id": "proj-5",
+      "title": "MuseMint",
+      "description": "A creator marketplace for selling digital art, templates, and micro-commissions.",
+      "goal": 30000,
+      "raised": 9100,
+      "image": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1200&q=80",
+      "category": "Creator Economy",
+      "daysLeft": 29,
+      "featured": false,
+      "founder": {
+        "name": "Naina Verma",
+        "bio": "Helping independent creators monetize their work directly."
+      },
+      "updates": []
+    },
+    {
+      "id": "proj-6",
+      "title": "GreenNest Homes",
+      "description": "Sustainable prefab housing concept built around low-cost, modular materials.",
+      "goal": 120000,
+      "raised": 64500,
+      "image": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
+      "category": "PropTech",
+      "daysLeft": 41,
+      "featured": true,
+      "founder": {
+        "name": "Dev Malik",
+        "bio": "Designing affordable housing with modern modular systems."
+      },
+      "updates": [
+        {
+          "date": "2026-04-09",
+          "content": "Completed prototype mockups for the first modular housing unit."
+        }
+      ]
+    }
+  ],
+  "investments": [
+    {
+      "id": "4222fe7a-e98b-4bed-b0db-3688d257047d",
+      "projectId": "proj-3",
+      "projectTitle": "CampusLoop",
+      "amount": 45000,
+      "createdAt": "2026-04-10T16:39:30.413Z",
+      "status": "confirmed",
+      "investorName": "Yashraj Singh"
+    },
+    {
+      "id": "aa7d9715-e101-49f4-8405-51417811694c",
+      "projectId": "proj-3",
+      "projectTitle": "CampusLoop",
+      "amount": 2000,
+      "createdAt": "2026-04-10T16:37:14.126Z",
+      "status": "confirmed",
+      "investorName": "Yashraj Singh"
+    },
+    {
+      "id": "inv-1",
+      "projectId": "proj-1",
+      "projectTitle": "SolarGrid Mini",
+      "amount": 2500,
+      "createdAt": "2026-04-07T10:20:00.000Z",
+      "status": "confirmed",
+      "investorName": "Demo Investor"
+    },
+    {
+      "id": "inv-2",
+      "projectId": "proj-2",
+      "projectTitle": "HealthNest AI",
+      "amount": 1500,
+      "createdAt": "2026-04-08T14:05:00.000Z",
+      "status": "pending",
+      "investorName": "Demo Investor"
+    }
+  ]
+}
