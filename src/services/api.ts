@@ -25,7 +25,7 @@ export const projectService = {
 };
 
 export const userService = {
-  register: (data: any) => apiClient.post('/auth/register', data),
+  register: (data: any) => apiClient.post('/auth/signup', data),
   login: (data: any) => apiClient.post('/auth/login', data),
   getProfile: () => apiClient.get('/users/profile'),
   updateProfile: (data: any) => apiClient.put('/users/profile', data),
