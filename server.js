@@ -463,22 +463,59 @@ app.post('/api/investments', requireAuth, async (req, res) => {
   return res.status(201).json(investment);
 });
 
-app.post('/api/payments/initiate', async (req, res) => {
+app.post('/api/payments/initiate', requireAuth, async (req, res) => {
   const { amount, projectId } = req.body || {};
-  return res.json({
-    paymentId: randomUUID(),
-    projectId: projectId || null,
-    amount: Number(amount || 0),
+  
+  if (!amount || Number(amount) <= 0) {
+    return res.status(400).json({ message: 'Invalid amount' });
+  }
+
+  if (!projectId) {
+    return res.status(400).json({ message: 'Project ID is required' });
+  }
+
+  const store = await readStore();
+  const project = store.projects.find((p) => p.id === projectId);
+  
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found' });
+  }
+
+  const paymentId = `pay_${randomUUID().toString().substring(0, 12)}`;
+  
+  return res.status(201).json({
+    success: true,
+    paymentId,
+    projectId,
+    amount: Number(amount),
     status: 'initiated',
+    createdAt: new Date().toISOString(),
   });
 });
 
-app.post('/api/payments/verify', async (req, res) => {
+app.post('/api/payments/verify', requireAuth, async (req, res) => {
   const { paymentId } = req.body || {};
+  
+  if (!paymentId) {
+    return res.status(400).json({ message: 'Payment ID is required' });
+  }
+
+  // Simulate random success rate (95% success for demo)
+  const isSuccessful = Math.random() < 0.95;
+
+  if (!isSuccessful) {
+    return res.status(400).json({ 
+      message: 'Payment verification failed. Please try again.',
+      verified: false,
+    });
+  }
+
   return res.json({
-    paymentId: paymentId || randomUUID(),
+    success: true,
+    paymentId,
     status: 'verified',
     verified: true,
+    verifiedAt: new Date().toISOString(),
   });
 });
 

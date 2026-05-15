@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { investmentService, projectService } from '../services/api';
+import PaymentModal from '../components/PaymentModal';
 
 interface TrackedInvestment {
   id: string;
@@ -29,6 +30,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [investmentAmount, setInvestmentAmount] = useState('');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProject();
@@ -64,7 +66,7 @@ export default function ProjectDetail() {
     localStorage.setItem('trackedInvestments', JSON.stringify(investments));
   };
 
-  const handleInvest = async () => {
+  const handleInvest = () => {
     const amount = parseFloat(investmentAmount);
 
     if (!investmentAmount || Number.isNaN(amount) || amount <= 0) {
@@ -72,17 +74,21 @@ export default function ProjectDetail() {
       return;
     }
 
-    const projectData = project;
-
-    if (!projectData || !id) {
+    if (!project || !id) {
       alert('Project is not available right now.');
       return;
     }
 
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentSuccess = async (paymentId: string, amount: number) => {
+    if (!project || !id) return;
+
     try {
       await investmentService.create({
         projectId: id,
-        projectTitle: projectData.title,
+        projectTitle: project.title,
         amount,
         status: 'confirmed',
       });
@@ -93,13 +99,13 @@ export default function ProjectDetail() {
           : currentProject
       );
       saveTrackedInvestment(amount, 'confirmed');
-      alert(`Investment of ₹${investmentAmount} tracked successfully!`);
       setInvestmentAmount('');
+      setIsPaymentModalOpen(false);
     } catch (error) {
       console.error('Error saving investment:', error);
       saveTrackedInvestment(amount, 'pending');
-      alert(`Investment of ₹${investmentAmount} saved locally as pending.`);
       setInvestmentAmount('');
+      setIsPaymentModalOpen(false);
     }
   };
 
@@ -115,6 +121,15 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen">
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        amount={parseFloat(investmentAmount) || 0}
+        projectId={id || ''}
+        projectTitle={project?.title || ''}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+      />
+
       <div className="relative h-96 overflow-hidden">
         <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
