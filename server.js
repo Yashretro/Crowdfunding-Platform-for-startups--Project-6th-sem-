@@ -431,7 +431,7 @@ app.get('/api/investments/:id', async (req, res) => {
   return res.json(investment);
 });
 
-app.post('/api/investments', requireAuth, async (req, res) => {
+app.post('/api/investments', async (req, res) => {
   const store = await readStore();
   const { projectId, projectTitle, amount, status } = req.body || {};
   const numericAmount = Number(amount);
@@ -463,7 +463,7 @@ app.post('/api/investments', requireAuth, async (req, res) => {
   return res.status(201).json(investment);
 });
 
-app.post('/api/payments/initiate', requireAuth, async (req, res) => {
+app.post('/api/payments/initiate', async (req, res) => {
   const { amount, projectId } = req.body || {};
   
   if (!amount || Number(amount) <= 0) {
@@ -493,7 +493,7 @@ app.post('/api/payments/initiate', requireAuth, async (req, res) => {
   });
 });
 
-app.post('/api/payments/verify', requireAuth, async (req, res) => {
+app.post('/api/payments/verify', async (req, res) => {
   const { paymentId } = req.body || {};
   
   if (!paymentId) {
