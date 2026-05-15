@@ -4,6 +4,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { existsSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
+import mongoose from 'mongoose';
+import { connectDB, seedFromFileIfEmpty } from './server/db.js';
+import User from './server/models/User.js';
+import Project from './server/models/Project.js';
+import Investment from './server/models/Investment.js';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
@@ -117,12 +122,35 @@ async function ensureStore() {
 }
 
 async function readStore() {
+  // If MongoDB is connected, read from DB collections
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    const users = await User.find().lean();
+    const projects = await Project.find().lean();
+    const investments = await Investment.find().lean();
+    return { users, projects, investments };
+  }
   await ensureStore();
   const content = await readFile(dataFile, 'utf-8');
   return JSON.parse(content);
 }
 
 async function writeStore(store) {
+  // If MongoDB is connected, write to collections (replace)
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    if (Array.isArray(store.users)) {
+      await User.deleteMany({});
+      await User.insertMany(store.users);
+    }
+    if (Array.isArray(store.projects)) {
+      await Project.deleteMany({});
+      await Project.insertMany(store.projects);
+    }
+    if (Array.isArray(store.investments)) {
+      await Investment.deleteMany({});
+      await Investment.insertMany(store.investments);
+    }
+    return;
+  }
   await writeFile(dataFile, JSON.stringify(store, null, 2), 'utf-8');
 }
 
@@ -412,7 +440,14 @@ app.post('/api/admin/projects/:id/reject', requireAuth, requireRole('admin'), as
 });
 
 app.listen(port, async () => {
-  await ensureStore();
-  const url = process.env.RAILWAY_ENVIRONMENT_NAME ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${port}`;
-  console.log(`Kickscale backend running at ${url}`);
+  try {
+    await connectDB(process.env.MONGODB_URI);
+    await seedFromFileIfEmpty({ User, Project, Investment });
+    const url = process.env.RAILWAY_ENVIRONMENT_NAME ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${port}`;
+    console.log(`Kickscale backend running at ${url} (MongoDB enabled)`);
+  } catch (err) {
+    await ensureStore();
+    const url = process.env.RAILWAY_ENVIRONMENT_NAME ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${port}`;
+    console.log(`Kickscale backend running at ${url} (fallback JSON store)`);
+  }
 });
