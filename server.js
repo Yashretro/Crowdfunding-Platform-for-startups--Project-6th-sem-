@@ -163,6 +163,11 @@ function createToken(userId) {
   return jwt.sign({ sub: userId }, JWT_SECRET, { expiresIn: '7d' });
 }
 
+function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
 function getAuthUser(req, store) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -200,11 +205,59 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'kickscale-backend' });
 });
 
+app.post('/api/auth/signup', async (req, res) => {
+  const { firstName, lastName, email, password, userType } = req.body || {};
+
+  if (!firstName || !lastName || !email || !password || !userType) {
+    return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ message: 'Invalid email format.' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  }
+
+  const store = await readStore();
+  const existingUser = store.users.find((user) => user.email.toLowerCase() === String(email).toLowerCase());
+
+  if (existingUser) {
+    return res.status(409).json({ message: 'User already exists.' });
+  }
+
+  const hashed = bcrypt.hashSync(password, 8);
+  const newUser = {
+    id: randomUUID(),
+    firstName,
+    lastName,
+    email,
+    password: hashed,
+    userType,
+    role: userType,
+  };
+
+  store.users.unshift(newUser);
+  await writeStore(store);
+
+  return res.status(201).json({ token: createToken(newUser.id), user: publicUser(newUser) });
+});
+
+// Backward compatibility alias
 app.post('/api/auth/register', async (req, res) => {
   const { firstName, lastName, email, password, userType } = req.body || {};
 
   if (!firstName || !lastName || !email || !password || !userType) {
     return res.status(400).json({ message: 'All fields are required.' });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ message: 'Invalid email format.' });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
   }
 
   const store = await readStore();
@@ -233,6 +286,15 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required.' });
+  }
+
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ message: 'Invalid email format.' });
+  }
+
   const store = await readStore();
   const user = store.users.find((item) => item.email.toLowerCase() === String(email).toLowerCase());
   if (!user) return res.status(401).json({ message: 'Invalid email or password.' });
@@ -316,12 +378,17 @@ app.post('/api/projects', requireAuth, async (req, res) => {
   return res.status(201).json(newProject);
 });
 
-app.put('/api/projects/:id', async (req, res) => {
+app.put('/api/projects/:id', requireAuth, async (req, res) => {
   const store = await readStore();
   const project = store.projects.find((item) => item.id === req.params.id);
 
   if (!project) {
     return res.status(404).json({ message: 'Project not found.' });
+  }
+
+  // Only allow admin to update any project
+  if (req.user.role !== 'admin' && req.user.userType !== 'admin') {
+    return res.status(403).json({ message: 'Only admins can update projects.' });
   }
 
   Object.assign(project, req.body || {});
