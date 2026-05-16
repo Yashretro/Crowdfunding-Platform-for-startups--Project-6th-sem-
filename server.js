@@ -232,7 +232,6 @@ async function ensureStore() {
 }
 
 async function readStore() {
-  // If MongoDB is connected, read from DB collections
   if (mongoose.connection && mongoose.connection.readyState === 1) {
     const users = await User.find().lean();
     const projects = await Project.find().lean();
@@ -248,7 +247,6 @@ async function readStore() {
 }
 
 async function writeStore(store) {
-  // If MongoDB is connected, write to collections (replace)
   if (mongoose.connection && mongoose.connection.readyState === 1) {
     if (Array.isArray(store.users)) {
       await User.deleteMany({});
@@ -348,7 +346,6 @@ app.post('/api/auth/signup', async (req, res) => {
   return res.status(201).json({ token: createToken(newUser.id), user: publicUser(newUser) });
 });
 
-// Backward compatibility alias
 app.post('/api/auth/register', async (req, res) => {
   const validated = validateAuthPayload(req.body);
   if (validated.error) {
@@ -492,7 +489,6 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
     return res.status(404).json({ message: 'Project not found.' });
   }
 
-  // Only allow admin to update any project
   if (req.user.role !== 'admin' && req.user.userType !== 'admin') {
     return res.status(403).json({ message: 'Only admins can update projects.' });
   }
@@ -618,7 +614,6 @@ app.post('/api/payments/verify', async (req, res) => {
     return res.status(400).json({ message: 'Payment ID is required' });
   }
 
-  // Simulate random success rate (95% success for demo)
   const isSuccessful = Math.random() < 0.95;
 
   if (!isSuccessful) {
@@ -647,7 +642,6 @@ app.use((err, _req, res, _next) => {
   return res.status(500).json({ message: 'Server error.' });
 });
 
-// Admin endpoints
 app.get('/api/admin/projects', requireAuth, requireRole('admin'), async (req, res) => {
   const store = await readStore();
   return res.json(store.projects);

@@ -49,6 +49,7 @@ export default function Home() {
                 </p>
                 <div className="flex gap-4 flex-wrap mb-8">
                   <Link to="/projects" className="btn-primary">Explore Projects</Link>
+                  <Link to="/campaigns/new" className="btn-outline">Create Campaign</Link>
                   <Link to="/signup" className="btn-outline">Launch Campaign</Link>
                 </div>
                 <div className="flex flex-wrap gap-3 text-sm text-slate-600">
@@ -358,6 +359,7 @@ export default function Home() {
             <h2 className="text-4xl font-bold mb-4 text-slate-900">Ready to Scale Like a Category Leader?</h2>
             <p className="text-xl text-slate-700 mb-8">Join ambitious founders building durable startups with the backing they deserve.</p>
             <div className="flex justify-center gap-4 flex-wrap">
+              <Link to="/campaigns/new" className="btn-primary inline-block">Create Campaign</Link>
               <Link to="/signup" className="btn-primary inline-block">Get Started Today</Link>
               <Link to="/projects" className="btn-outline inline-block">See Live Campaigns</Link>
             </div>
