@@ -189,7 +189,7 @@ export default function Projects() {
                 </div>
               </div>
 
-          {loading ? (
+              {loading ? (
             <div className="text-center text-gray-600 py-12">Loading projects...</div>
           ) : filteredProjects.length === 0 ? (
             <div className="text-center text-gray-600 py-12">No projects found. Reset filters or reload the page.</div>
@@ -197,7 +197,16 @@ export default function Projects() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 stagger">
               {filteredProjects.map((project) => (
                 <div key={project.id} className="card card-race card-tilt hover-lift">
-                  <img src={project.image} alt={project.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                  <img
+                    src={project.image}
+                    alt={project.title}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement;
+                      img.onerror = null;
+                      img.src = 'https://via.placeholder.com/600x300?text=No+Image';
+                    }}
+                  />
                   <span className="badge-glass mb-3">
                     {project.category}
                   </span>

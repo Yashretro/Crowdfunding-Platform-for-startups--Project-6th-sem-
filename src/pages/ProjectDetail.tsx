@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { investmentService, projectService } from '../services/api';
 import PaymentModal from '../components/PaymentModal';
+import { defaultProjects } from '../data/defaultProjects';
 
 interface TrackedInvestment {
   id: string;
@@ -28,6 +29,7 @@ interface Project {
 export default function ProjectDetail() {
   const { id } = useParams();
   const [project, setProject] = useState<Project | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [investmentAmount, setInvestmentAmount] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -42,6 +44,11 @@ export default function ProjectDetail() {
       setProject(response.data);
     } catch (error) {
       console.error('Error fetching project:', error);
+      // If backend returns 404 (project not found), fall back to local seeded/default projects
+      if ((error as any)?.response?.status === 404) {
+        const fallback = defaultProjects.find((p) => p.id === id);
+        if (fallback) setProject(fallback as Project);
+      }
     } finally {
       setLoading(false);
     }
@@ -131,7 +138,12 @@ export default function ProjectDetail() {
       />
 
       <div className="relative h-96 overflow-hidden">
-        <img src={project.image} alt={project.title} className="w-full h-full object-cover" />
+        <img
+          src={!imageError && project.image ? project.image : 'https://via.placeholder.com/1200x600?text=No+Image'}
+          alt={project.title}
+          className="w-full h-full object-cover"
+          onError={() => setImageError(true)}
+        />
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
         <div className="absolute inset-0 flex items-end">
           <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
