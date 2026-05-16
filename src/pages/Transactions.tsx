@@ -14,7 +14,7 @@ interface TransactionItem {
 type DateFilter = 'all' | 'today' | '7d' | '30d';
 
 export default function Transactions() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +47,18 @@ export default function Transactions() {
     try {
       const response = await investmentService.getAll();
       const apiData = Array.isArray(response.data) ? response.data : [];
-      const mappedApiData: TransactionItem[] = apiData.map((item: any) => ({
-        id: item.id || item._id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        projectId: item.projectId || item.project?.id,
-        projectTitle: item.projectTitle || item.project?.title || 'Project',
-        amount: Number(item.amount || 0),
-        createdAt: item.createdAt || new Date().toISOString(),
-        status: item.status || item.paymentStatus || 'confirmed',
-      }));
+      const mappedApiData: TransactionItem[] = apiData.map((item) => {
+        const obj = (typeof item === 'object' && item !== null) ? item as Record<string, unknown> : {};
+        const proj = (obj.project && typeof obj.project === 'object') ? (obj.project as Record<string, unknown>) : undefined;
+        return {
+          id: String(obj.id ?? obj._id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          projectId: String(obj.projectId ?? proj?.id ?? ''),
+          projectTitle: String(obj.projectTitle ?? proj?.title ?? 'Project'),
+          amount: Number(obj.amount ?? 0),
+          createdAt: String(obj.createdAt ?? new Date().toISOString()),
+          status: (String(obj.status ?? obj.paymentStatus ?? 'confirmed') as 'pending' | 'confirmed' | 'failed'),
+        };
+      });
 
       if (mappedApiData.length > 0) {
         setTransactions(mappedApiData);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { investmentService, projectService } from '../services/api';
 import PaymentModal from '../components/PaymentModal';
@@ -34,25 +34,25 @@ export default function ProjectDetail() {
   const [investmentAmount, setInvestmentAmount] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchProject();
-  }, [id]);
-
-  const fetchProject = async () => {
+  const fetchProject = useCallback(async () => {
     try {
       const response = await projectService.getById(id!);
-      setProject(response.data);
+      setProject(response.data as Project);
     } catch (error) {
       console.error('Error fetching project:', error);
       // If backend returns 404 (project not found), fall back to local seeded/default projects
-      if ((error as any)?.response?.status === 404) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
         const fallback = defaultProjects.find((p) => p.id === id);
         if (fallback) setProject(fallback as Project);
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
 
   const saveTrackedInvestment = (amount: number, status: 'pending' | 'confirmed' | 'failed' = 'confirmed') => {
     if (!project || !id) return;
@@ -89,7 +89,7 @@ export default function ProjectDetail() {
     setIsPaymentModalOpen(true);
   };
 
-  const handlePaymentSuccess = async (paymentId: string, amount: number) => {
+  const handlePaymentSuccess = async (_paymentId: string, amount: number) => {
     if (!project || !id) return;
 
     try {

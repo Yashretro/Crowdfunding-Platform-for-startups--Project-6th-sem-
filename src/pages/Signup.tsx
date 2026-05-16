@@ -44,8 +44,9 @@ export default function Signup() {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }

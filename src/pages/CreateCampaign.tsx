@@ -53,8 +53,9 @@ export default function CreateCampaign() {
       } else {
         navigate('/projects');
       }
-    } catch (submitError: any) {
-      setError(submitError?.response?.data?.message || 'Could not create campaign. Please try again.');
+    } catch (submitError: unknown) {
+      const message = (submitError as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message || 'Could not create campaign. Please try again.');
     } finally {
       setLoading(false);
     }

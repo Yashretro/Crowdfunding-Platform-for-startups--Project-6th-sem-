@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
 import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
@@ -15,13 +15,38 @@ export default function Projects() {
 
   const categories = ['all', 'Clean Tech', 'Health Tech', 'EdTech', 'Food Tech', 'Entertainment', 'Finance'];
 
+  const filterAndSortProjects = useCallback(() => {
+    let filtered = [...projects];
+
+    if (category !== 'all') {
+      filtered = filtered.filter(p => p.category.toLowerCase() === category.toLowerCase());
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(p =>
+        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (sortBy === 'trending') {
+      filtered.sort((a, b) => b.raised - a.raised);
+    } else if (sortBy === 'newest') {
+      filtered.sort((a, b) => new Date(b.id).getTime() - new Date(a.id).getTime());
+    } else if (sortBy === 'closing') {
+      filtered.sort((a, b) => a.daysLeft - b.daysLeft);
+    }
+
+    setFilteredProjects(filtered);
+  }, [projects, category, searchTerm, sortBy]);
+
   useEffect(() => {
     fetchProjects();
   }, []);
 
   useEffect(() => {
     filterAndSortProjects();
-  }, [projects, category, searchTerm, sortBy]);
+  }, [filterAndSortProjects]);
 
   const categoryCounts = useMemo(() => {
     return projects.reduce<Record<string, number>>((counts, project) => {
@@ -50,31 +75,6 @@ export default function Projects() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterAndSortProjects = () => {
-    let filtered = [...projects];
-
-    if (category !== 'all') {
-      filtered = filtered.filter(p => p.category.toLowerCase() === category.toLowerCase());
-    }
-
-    if (searchTerm) {
-      filtered = filtered.filter(p =>
-        p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (sortBy === 'trending') {
-      filtered.sort((a, b) => b.raised - a.raised);
-    } else if (sortBy === 'newest') {
-      filtered.sort((a, b) => new Date(b.id).getTime() - new Date(a.id).getTime());
-    } else if (sortBy === 'closing') {
-      filtered.sort((a, b) => a.daysLeft - b.daysLeft);
-    }
-
-    setFilteredProjects(filtered);
   };
 
   return (

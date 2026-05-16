@@ -11,8 +11,15 @@ interface InvestmentItem {
   status?: 'pending' | 'confirmed' | 'failed';
 }
 
+interface User {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  userType?: string;
+}
+
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [investments, setInvestments] = useState<InvestmentItem[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(true);
   const [trackingError, setTrackingError] = useState<string | null>(null);
@@ -41,14 +48,18 @@ export default function Dashboard() {
     try {
       const response = await investmentService.getAll();
       const apiData = Array.isArray(response.data) ? response.data : [];
-      const mappedApiData: InvestmentItem[] = apiData.map((item: any) => ({
-        id: item.id || item._id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        projectId: item.projectId || item.project?.id,
-        projectTitle: item.projectTitle || item.project?.title || 'Project',
-        amount: Number(item.amount || 0),
-        createdAt: item.createdAt || new Date().toISOString(),
-        status: item.status || item.paymentStatus || 'confirmed',
-      }));
+      const mappedApiData: InvestmentItem[] = apiData.map((item) => {
+        const obj = (typeof item === 'object' && item !== null) ? item as Record<string, unknown> : {};
+        const proj = (obj.project && typeof obj.project === 'object') ? (obj.project as Record<string, unknown>) : undefined;
+        return {
+          id: String(obj.id ?? obj._id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          projectId: String(obj.projectId ?? proj?.id ?? ''),
+          projectTitle: String(obj.projectTitle ?? proj?.title ?? 'Project'),
+          amount: Number(obj.amount ?? 0),
+          createdAt: String(obj.createdAt ?? new Date().toISOString()),
+          status: (String(obj.status ?? obj.paymentStatus ?? 'confirmed') as 'pending' | 'confirmed' | 'failed'),
+        };
+      });
 
       if (mappedApiData.length > 0) {
         setInvestments(mappedApiData);
