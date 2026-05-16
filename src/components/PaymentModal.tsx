@@ -55,11 +55,13 @@ export default function PaymentModal({
 
       await paymentService.verifyPayment({
         paymentId: response.data.paymentId,
+        amount: numAmount,
       });
 
       setStep('success');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Payment failed. Please try again.');
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message || 'Payment failed. Please try again.');
       setStep('error');
     } finally {
       setLoading(false);
