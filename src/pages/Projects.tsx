@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
 import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 type Project = DefaultProject;
 
@@ -47,6 +48,10 @@ export default function Projects() {
   useEffect(() => {
     filterAndSortProjects();
   }, [filterAndSortProjects]);
+
+  useRealtimeSync(['projects', 'investments'], () => {
+    fetchProjects();
+  });
 
   const categoryCounts = useMemo(() => {
     return projects.reduce<Record<string, number>>((counts, project) => {

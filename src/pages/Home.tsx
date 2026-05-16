@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { projectService } from '../services/api';
 import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 type Project = DefaultProject;
 
@@ -9,11 +10,8 @@ export default function Home() {
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchFeaturedProjects();
-  }, []);
-
-  const fetchFeaturedProjects = async () => {
+  const fetchFeaturedProjects = useCallback(async () => {
+    setLoading(true);
     try {
       const response = await projectService.getAll({ featured: true, limit: 6 });
       const apiProjects = Array.isArray(response.data) ? response.data : [];
@@ -24,7 +22,15 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchFeaturedProjects();
+  }, [fetchFeaturedProjects]);
+
+  useRealtimeSync(['projects', 'investments'], () => {
+    fetchFeaturedProjects();
+  });
 
   return (
     <div className="min-h-screen">

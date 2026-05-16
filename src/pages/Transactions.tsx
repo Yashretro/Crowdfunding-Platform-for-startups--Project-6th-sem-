@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { investmentService } from '../services/api';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 interface TransactionItem {
   id: string;
@@ -39,6 +40,12 @@ export default function Transactions() {
 
     loadTransactions();
   }, [navigate]);
+
+  useRealtimeSync(['investments', 'payments'], (event) => {
+    if (event.resource === 'investments' || event.resource === 'payments') {
+      loadTransactions();
+    }
+  });
 
   const loadTransactions = async () => {
     setLoading(true);

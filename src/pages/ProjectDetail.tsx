@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { investmentService, projectService } from '../services/api';
 import PaymentModal from '../components/PaymentModal';
 import { defaultProjects } from '../data/defaultProjects';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 interface TrackedInvestment {
   id: string;
@@ -53,6 +54,15 @@ export default function ProjectDetail() {
   useEffect(() => {
     fetchProject();
   }, [fetchProject]);
+
+  useRealtimeSync(['projects', 'investments', 'payments'], (event) => {
+    if (event.resource === 'projects' && (!event.projectId || event.projectId === id)) {
+      fetchProject();
+    }
+    if (event.resource === 'investments' && event.projectId === id) {
+      fetchProject();
+    }
+  });
 
   const saveTrackedInvestment = (amount: number, status: 'pending' | 'confirmed' | 'failed' = 'confirmed') => {
     if (!project || !id) return;

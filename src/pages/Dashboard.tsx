@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { investmentService } from '../services/api';
+import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
 interface InvestmentItem {
   id: string;
@@ -40,6 +41,12 @@ export default function Dashboard() {
 
     loadTrackingData();
   }, [navigate]);
+
+  useRealtimeSync(['investments', 'payments'], (event) => {
+    if (event.resource === 'investments' || event.resource === 'payments') {
+      loadTrackingData();
+    }
+  });
 
   const loadTrackingData = async () => {
     setTrackingLoading(true);

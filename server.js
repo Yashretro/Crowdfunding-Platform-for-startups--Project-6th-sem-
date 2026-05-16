@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken';
 import { existsSync } from 'fs';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import mongoose from 'mongoose';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { connectDB, seedFromFileIfEmpty } from './server/db.js';
 import User from './server/models/User.js';
 import Project from './server/models/Project.js';
@@ -110,9 +112,23 @@ const defaultStore = {
 
 const app = express();
 const port = process.env.PORT || 5000;
+const httpServer = createServer(app);
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  },
+});
 
 app.use(cors());
 app.use(express.json());
+
+function emitSyncUpdate(payload) {
+  io.emit('sync:update', {
+    timestamp: new Date().toISOString(),
+    ...payload,
+  });
+}
 
 async function ensureStore() {
   if (!existsSync(dataFile)) {
@@ -375,6 +391,7 @@ app.post('/api/projects', requireAuth, async (req, res) => {
 
   store.projects.unshift(newProject);
   await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'created', id: newProject.id });
   return res.status(201).json(newProject);
 });
 
@@ -393,6 +410,7 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
 
   Object.assign(project, req.body || {});
   await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id });
   return res.json(project);
 });
 
@@ -406,6 +424,7 @@ app.delete('/api/projects/:id', requireAuth, requireRole('admin'), async (req, r
 
   store.projects = nextProjects;
   await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'deleted', id: req.params.id });
   return res.status(204).send();
 });
 
@@ -460,6 +479,10 @@ app.post('/api/investments', async (req, res) => {
   }
 
   await writeStore(store);
+  emitSyncUpdate({ resource: 'investments', action: 'created', id: investment.id, projectId });
+  if (project) {
+    emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id, projectId: project.id });
+  }
   return res.status(201).json(investment);
 });
 
@@ -510,6 +533,7 @@ app.post('/api/payments/verify', async (req, res) => {
     });
   }
 
+  emitSyncUpdate({ resource: 'payments', action: 'verified', id: paymentId });
   return res.json({
     success: true,
     paymentId,
@@ -531,6 +555,7 @@ app.post('/api/admin/projects/:id/approve', requireAuth, requireRole('admin'), a
   if (!project) return res.status(404).json({ message: 'Project not found.' });
   project.approved = true;
   await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id });
   return res.json(project);
 });
 
@@ -540,10 +565,11 @@ app.post('/api/admin/projects/:id/reject', requireAuth, requireRole('admin'), as
   if (!project) return res.status(404).json({ message: 'Project not found.' });
   project.rejected = true;
   await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id });
   return res.json(project);
 });
 
-app.listen(port, async () => {
+httpServer.listen(port, async () => {
   try {
     await connectDB(process.env.MONGODB_URI);
     await seedFromFileIfEmpty({ User, Project, Investment });
