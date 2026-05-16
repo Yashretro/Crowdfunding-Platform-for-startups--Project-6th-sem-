@@ -1,3 +1,95 @@
+# Deploy guide (server)
+
+This file documents a minimal, repeatable server deployment for the app.
+
+1) Server prerequisites (Ubuntu example)
+
+```bash
+# Update OS
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 18 and build tools
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs build-essential git nginx
+
+# (optional) PM2
+sudo npm i -g pm2
+
+# (optional) Certbot for TLS
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+2) Copy project to server
+
+Place the project at `/var/www/crowdfunding` (or a path you choose). Clone from Git:
+
+```bash
+sudo mkdir -p /var/www
+cd /var/www
+sudo git clone <your-repo-url> crowdfunding
+cd crowdfunding
+sudo chown -R $USER:$USER .
+```
+
+3) Environment
+
+Create `.env` in project root from `.env.example` and set real values. Ensure `VITE_API_BASE_URL` points to `https://your-domain.com/api` and `VITE_SOCKET_URL` to `https://your-domain.com`.
+
+4) Install & build
+
+```bash
+cd /var/www/crowdfunding
+npm ci
+npm run build
+```
+
+5a) Run with PM2 (recommended)
+
+```bash
+pm2 startOrRestart ecosystem.config.js --env production
+pm2 save
+pm2 startup
+```
+
+5b) Or run with systemd (example)
+
+Copy `deploy/crowdfunding.service.example` to `/etc/systemd/system/crowdfunding.service`, edit `WorkingDirectory` and `User`, then:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now crowdfunding.service
+sudo journalctl -u crowdfunding -f
+```
+
+6) Nginx
+
+Copy `deploy/nginx.conf.example` to `/etc/nginx/sites-available/crowdfunding`, replace `your-domain.com` and `root` path, then:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/crowdfunding /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+7) TLS (Let's Encrypt)
+
+```bash
+sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+```
+
+8) Firewall / DNS
+
+Open ports 80/443 and point your domain A record to the server IP.
+
+9) Automatic deployment (simple)
+
+You can run the provided `deploy.sh` on the server to pull latest, install, build and restart PM2:
+
+```bash
+cd /var/www/crowdfunding
+./deploy.sh
+```
+
+For GitHub Actions SSH deployment, add an SSH key as a GitHub secret and I can add a workflow to auto-deploy on push.
 Deployment guide — frontend (Vercel) and backend (Railway/Docker)
 
 Overview

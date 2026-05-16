@@ -21,6 +21,9 @@ const dataDir = join(__dirname, 'server', 'data');
 const dataFile = join(dataDir, 'store.json');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const isMongoConfigured = Boolean(process.env.MONGODB_URI);
+const allowedUserTypes = new Set(['investor', 'founder', 'admin']);
+const MAX_LIMIT = 50;
 
 const defaultStore = {
   users: [
@@ -120,14 +123,105 @@ const io = new SocketIOServer(httpServer, {
   },
 });
 
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+}));
+app.use(express.json({ limit: '1mb' }));
 
 function emitSyncUpdate(payload) {
   io.emit('sync:update', {
     timestamp: new Date().toISOString(),
     ...payload,
   });
+}
+
+function cleanString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function toPositiveNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function toPositiveLimit(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(Math.floor(parsed), MAX_LIMIT);
+}
+
+function normalizeUserType(value) {
+  const userType = cleanString(value).toLowerCase();
+  return allowedUserTypes.has(userType) ? userType : null;
+}
+
+function validateAuthPayload(body) {
+  const firstName = cleanString(body?.firstName);
+  const lastName = cleanString(body?.lastName);
+  const email = cleanString(body?.email).toLowerCase();
+  const password = cleanString(body?.password);
+  const userType = normalizeUserType(body?.userType);
+
+  if (!firstName || !lastName || !email || !password || !userType) {
+    return { error: 'All fields are required.' };
+  }
+
+  if (!isValidEmail(email)) {
+    return { error: 'Invalid email format.' };
+  }
+
+  if (password.length < 8) {
+    return { error: 'Password must be at least 8 characters.' };
+  }
+
+  return { firstName, lastName, email, password, userType };
+}
+
+function validateProjectPayload(body) {
+  const title = cleanString(body?.title);
+  const description = cleanString(body?.description);
+  const image = cleanString(body?.image);
+  const category = cleanString(body?.category);
+  const goal = toPositiveNumber(body?.goal);
+  const daysLeft = toPositiveNumber(body?.daysLeft) ?? 30;
+  const featured = Boolean(body?.featured);
+
+  if (!title || !description || !image || !category || goal === null) {
+    return { error: 'Missing required project fields.' };
+  }
+
+  const founder = body?.founder && typeof body.founder === 'object'
+    ? {
+        name: cleanString(body.founder.name) || 'Founder Name',
+        bio: cleanString(body.founder.bio) || 'Founder bio',
+      }
+    : { name: 'Founder Name', bio: 'Founder bio' };
+
+  const updates = Array.isArray(body?.updates)
+    ? body.updates
+        .filter((update) => update && typeof update === 'object')
+        .map((update) => ({
+          date: cleanString(update.date) || new Date().toISOString().slice(0, 10),
+          content: cleanString(update.content),
+        }))
+        .filter((update) => update.content)
+    : [];
+
+  return { title, description, image, category, goal, daysLeft, featured, founder, updates };
+}
+
+function validateInvestmentPayload(body) {
+  const projectId = cleanString(body?.projectId);
+  const projectTitle = cleanString(body?.projectTitle);
+  const amount = toPositiveNumber(body?.amount);
+  const status = cleanString(body?.status) || 'confirmed';
+
+  if (!projectId || amount === null) {
+    return { error: 'Project and valid amount are required.' };
+  }
+
+  return { projectId, projectTitle, amount, status };
 }
 
 async function ensureStore() {
@@ -144,6 +238,9 @@ async function readStore() {
     const projects = await Project.find().lean();
     const investments = await Investment.find().lean();
     return { users, projects, investments };
+  }
+  if (isMongoConfigured) {
+    throw new Error('MongoDB connection is unavailable.');
   }
   await ensureStore();
   const content = await readFile(dataFile, 'utf-8');
@@ -218,40 +315,31 @@ function requireRole(role) {
 }
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'kickscale-backend' });
+  res.json({ ok: true, service: 'kickscale-backend', mongo: mongoose.connection.readyState === 1 });
 });
 
 app.post('/api/auth/signup', async (req, res) => {
-  const { firstName, lastName, email, password, userType } = req.body || {};
-
-  if (!firstName || !lastName || !email || !password || !userType) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ message: 'Invalid email format.' });
-  }
-
-  if (password.length < 6) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  const validated = validateAuthPayload(req.body);
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
   }
 
   const store = await readStore();
-  const existingUser = store.users.find((user) => user.email.toLowerCase() === String(email).toLowerCase());
+  const existingUser = store.users.find((user) => user.email.toLowerCase() === validated.email);
 
   if (existingUser) {
     return res.status(409).json({ message: 'User already exists.' });
   }
 
-  const hashed = bcrypt.hashSync(password, 8);
+  const hashed = bcrypt.hashSync(validated.password, 10);
   const newUser = {
     id: randomUUID(),
-    firstName,
-    lastName,
-    email,
+    firstName: validated.firstName,
+    lastName: validated.lastName,
+    email: validated.email,
     password: hashed,
-    userType,
-    role: userType,
+    userType: validated.userType,
+    role: validated.userType,
   };
 
   store.users.unshift(newUser);
@@ -262,36 +350,27 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // Backward compatibility alias
 app.post('/api/auth/register', async (req, res) => {
-  const { firstName, lastName, email, password, userType } = req.body || {};
-
-  if (!firstName || !lastName || !email || !password || !userType) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
-
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ message: 'Invalid email format.' });
-  }
-
-  if (password.length < 6) {
-    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  const validated = validateAuthPayload(req.body);
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
   }
 
   const store = await readStore();
-  const existingUser = store.users.find((user) => user.email.toLowerCase() === String(email).toLowerCase());
+  const existingUser = store.users.find((user) => user.email.toLowerCase() === validated.email);
 
   if (existingUser) {
     return res.status(409).json({ message: 'User already exists.' });
   }
 
-  const hashed = bcrypt.hashSync(password, 8);
+  const hashed = bcrypt.hashSync(validated.password, 10);
   const newUser = {
     id: randomUUID(),
-    firstName,
-    lastName,
-    email,
+    firstName: validated.firstName,
+    lastName: validated.lastName,
+    email: validated.email,
     password: hashed,
-    userType,
-    role: userType,
+    userType: validated.userType,
+    role: validated.userType,
   };
 
   store.users.unshift(newUser);
@@ -301,7 +380,8 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body || {};
+  const email = cleanString(req.body?.email).toLowerCase();
+  const password = cleanString(req.body?.password);
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required.' });
@@ -312,7 +392,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   const store = await readStore();
-  const user = store.users.find((item) => item.email.toLowerCase() === String(email).toLowerCase());
+  const user = store.users.find((item) => item.email.toLowerCase() === email);
   if (!user) return res.status(401).json({ message: 'Invalid email or password.' });
   const match = bcrypt.compareSync(password, user.password);
   if (!match) return res.status(401).json({ message: 'Invalid email or password.' });
@@ -326,11 +406,20 @@ app.get('/api/users/profile', requireAuth, async (req, res) => {
 app.put('/api/users/profile', requireAuth, async (req, res) => {
   const store = await readStore();
   const user = req.user;
-  const { firstName, lastName, userType } = req.body || {};
-  user.firstName = firstName ?? user.firstName;
-  user.lastName = lastName ?? user.lastName;
-  user.userType = userType ?? user.userType;
-  user.role = userType ?? user.role;
+  const firstName = cleanString(req.body?.firstName);
+  const lastName = cleanString(req.body?.lastName);
+  const userType = normalizeUserType(req.body?.userType);
+
+  if (!firstName || !lastName) {
+    return res.status(400).json({ message: 'First name and last name are required.' });
+  }
+
+  user.firstName = firstName;
+  user.lastName = lastName;
+  if (userType) {
+    user.userType = userType;
+    user.role = userType;
+  }
   await writeStore(store);
   return res.json(publicUser(user));
 });
@@ -349,8 +438,9 @@ app.get('/api/projects', async (req, res) => {
     projects = projects.filter((project) => String(project.category).toLowerCase() === String(category).toLowerCase());
   }
 
-  if (limit) {
-    projects = projects.slice(0, Number(limit));
+  const limitValue = limit ? toPositiveLimit(limit) : null;
+  if (limitValue) {
+    projects = projects.slice(0, limitValue);
   }
 
   return res.json(projects);
@@ -369,24 +459,23 @@ app.get('/api/projects/:id', async (req, res) => {
 
 app.post('/api/projects', requireAuth, async (req, res) => {
   const store = await readStore();
-  const { title, description, goal, image, category, daysLeft, featured, founder, updates } = req.body || {};
-
-  if (!title || !description || !goal || !image || !category) {
-    return res.status(400).json({ message: 'Missing required project fields.' });
+  const validated = validateProjectPayload(req.body);
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
   }
 
   const newProject = {
     id: randomUUID(),
-    title,
-    description,
-    goal: Number(goal),
+    title: validated.title,
+    description: validated.description,
+    goal: validated.goal,
     raised: 0,
-    image,
-    category,
-    daysLeft: Number(daysLeft || 30),
-    featured: Boolean(featured),
-    founder: founder || { name: 'Founder Name', bio: 'Founder bio' },
-    updates: Array.isArray(updates) ? updates : [],
+    image: validated.image,
+    category: validated.category,
+    daysLeft: validated.daysLeft,
+    featured: validated.featured,
+    founder: validated.founder,
+    updates: validated.updates,
   };
 
   store.projects.unshift(newProject);
@@ -408,7 +497,12 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
     return res.status(403).json({ message: 'Only admins can update projects.' });
   }
 
-  Object.assign(project, req.body || {});
+  const validated = validateProjectPayload({ ...project, ...req.body });
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
+  }
+
+  Object.assign(project, validated);
   await writeStore(store);
   emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id });
   return res.json(project);
@@ -452,21 +546,23 @@ app.get('/api/investments/:id', async (req, res) => {
 
 app.post('/api/investments', async (req, res) => {
   const store = await readStore();
-  const { projectId, projectTitle, amount, status } = req.body || {};
-  const numericAmount = Number(amount);
-
-  if (!projectId || !numericAmount || numericAmount <= 0) {
-    return res.status(400).json({ message: 'Project and valid amount are required.' });
+  const validated = validateInvestmentPayload(req.body);
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
   }
 
-  const project = store.projects.find((item) => item.id === projectId);
+  const project = store.projects.find((item) => item.id === validated.projectId);
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found.' });
+  }
+
   const investment = {
     id: randomUUID(),
-    projectId,
-    projectTitle: projectTitle || project?.title || 'Project',
-    amount: numericAmount,
+    projectId: validated.projectId,
+    projectTitle: validated.projectTitle || project.title || 'Project',
+    amount: validated.amount,
     createdAt: new Date().toISOString(),
-    status: status || 'confirmed',
+    status: validated.status,
     investorName: getAuthUser(req, store)
       ? `${getAuthUser(req, store).firstName} ${getAuthUser(req, store).lastName}`
       : 'Guest Investor',
@@ -474,22 +570,21 @@ app.post('/api/investments', async (req, res) => {
 
   store.investments.unshift(investment);
 
-  if (project && investment.status === 'confirmed') {
-    project.raised = Number(project.raised || 0) + numericAmount;
+  if (investment.status === 'confirmed') {
+    project.raised = Number(project.raised || 0) + validated.amount;
   }
 
   await writeStore(store);
-  emitSyncUpdate({ resource: 'investments', action: 'created', id: investment.id, projectId });
-  if (project) {
-    emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id, projectId: project.id });
-  }
+  emitSyncUpdate({ resource: 'investments', action: 'created', id: investment.id, projectId: validated.projectId });
+  emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id, projectId: project.id });
   return res.status(201).json(investment);
 });
 
 app.post('/api/payments/initiate', async (req, res) => {
-  const { amount, projectId } = req.body || {};
-  
-  if (!amount || Number(amount) <= 0) {
+  const amount = toPositiveNumber(req.body?.amount);
+  const projectId = cleanString(req.body?.projectId);
+
+  if (amount === null) {
     return res.status(400).json({ message: 'Invalid amount' });
   }
 
@@ -510,7 +605,7 @@ app.post('/api/payments/initiate', async (req, res) => {
     success: true,
     paymentId,
     projectId,
-    amount: Number(amount),
+    amount,
     status: 'initiated',
     createdAt: new Date().toISOString(),
   });
@@ -541,6 +636,15 @@ app.post('/api/payments/verify', async (req, res) => {
     verified: true,
     verifiedAt: new Date().toISOString(),
   });
+});
+
+app.use((err, _req, res, _next) => {
+  if (err?.message === 'MongoDB connection is unavailable.') {
+    return res.status(503).json({ message: 'Database unavailable. Please retry.' });
+  }
+
+  console.error('Unhandled server error:', err);
+  return res.status(500).json({ message: 'Server error.' });
 });
 
 // Admin endpoints
