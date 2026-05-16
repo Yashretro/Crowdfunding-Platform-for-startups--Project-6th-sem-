@@ -35,6 +35,7 @@ const defaultStore = {
       password: bcrypt.hashSync('Admin@123', 8),
       userType: 'admin',
       role: 'admin',
+      watchlist: [],
     },
     {
       id: 'demo-founder',
@@ -44,6 +45,7 @@ const defaultStore = {
       password: bcrypt.hashSync('demo123', 8),
       userType: 'founder',
       role: 'founder',
+      watchlist: [],
     },
   ],
   projects: [
@@ -224,6 +226,28 @@ function validateInvestmentPayload(body) {
   return { projectId, projectTitle, amount, status };
 }
 
+function validateProjectUpdatePayload(body) {
+  const content = cleanString(body?.content);
+
+  if (!content) {
+    return { error: 'Update content is required.' };
+  }
+
+  return { content };
+}
+
+function isAdminUser(user) {
+  return Boolean(user && (user.role === 'admin' || user.userType === 'admin'));
+}
+
+function ensureWatchlist(user) {
+  if (!Array.isArray(user.watchlist)) {
+    user.watchlist = [];
+  }
+
+  return user.watchlist;
+}
+
 async function ensureStore() {
   if (!existsSync(dataFile)) {
     await mkdir(dataDir, { recursive: true });
@@ -338,6 +362,7 @@ app.post('/api/auth/signup', async (req, res) => {
     password: hashed,
     userType: validated.userType,
     role: validated.userType,
+    watchlist: [],
   };
 
   store.users.unshift(newUser);
@@ -397,6 +422,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.get('/api/users/profile', requireAuth, async (req, res) => {
+  ensureWatchlist(req.user);
   return res.json(publicUser(req.user));
 });
 
@@ -417,8 +443,54 @@ app.put('/api/users/profile', requireAuth, async (req, res) => {
     user.userType = userType;
     user.role = userType;
   }
+  ensureWatchlist(user);
   await writeStore(store);
   return res.json(publicUser(user));
+});
+
+app.get('/api/users/watchlist', requireAuth, async (req, res) => {
+  const store = await readStore();
+  const user = store.users.find((item) => item.id === req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+
+  const watchlist = ensureWatchlist(user);
+  const savedProjects = store.projects.filter((project) => watchlist.includes(project.id));
+
+  return res.json({ watchlist, savedProjects });
+});
+
+app.post('/api/users/watchlist/:projectId', requireAuth, async (req, res) => {
+  const store = await readStore();
+  const user = store.users.find((item) => item.id === req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+
+  const projectId = cleanString(req.params.projectId);
+  const project = store.projects.find((item) => item.id === projectId);
+
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found.' });
+  }
+
+  const watchlist = ensureWatchlist(user);
+  const alreadySaved = watchlist.includes(projectId);
+  user.watchlist = alreadySaved
+    ? watchlist.filter((savedProjectId) => savedProjectId !== projectId)
+    : [...watchlist, projectId];
+
+  await writeStore(store);
+
+  return res.json({
+    watchlist: user.watchlist,
+    savedProjects: store.projects.filter((savedProject) => user.watchlist.includes(savedProject.id)),
+    saved: !alreadySaved,
+    user: publicUser(user),
+  });
 });
 
 app.get('/api/projects', async (req, res) => {
@@ -456,6 +528,10 @@ app.get('/api/projects/:id', async (req, res) => {
 
 app.post('/api/projects', requireAuth, async (req, res) => {
   const store = await readStore();
+  if (!isAdminUser(req.user) && req.user.userType !== 'founder') {
+    return res.status(403).json({ message: 'Only founders can create campaigns.' });
+  }
+
   const validated = validateProjectPayload(req.body);
   if (validated.error) {
     return res.status(400).json({ message: validated.error });
@@ -463,6 +539,7 @@ app.post('/api/projects', requireAuth, async (req, res) => {
 
   const newProject = {
     id: randomUUID(),
+    ownerId: req.user.id,
     title: validated.title,
     description: validated.description,
     goal: validated.goal,
@@ -471,7 +548,10 @@ app.post('/api/projects', requireAuth, async (req, res) => {
     category: validated.category,
     daysLeft: validated.daysLeft,
     featured: validated.featured,
-    founder: validated.founder,
+    founder: {
+      name: `${req.user.firstName} ${req.user.lastName}`.trim(),
+      bio: `${req.user.userType === 'founder' ? 'Founder' : 'Admin'} on kickscale.`,
+    },
     updates: validated.updates,
   };
 
@@ -489,8 +569,8 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
     return res.status(404).json({ message: 'Project not found.' });
   }
 
-  if (req.user.role !== 'admin' && req.user.userType !== 'admin') {
-    return res.status(403).json({ message: 'Only admins can update projects.' });
+  if (!isAdminUser(req.user) && project.ownerId !== req.user.id) {
+    return res.status(403).json({ message: 'Only the campaign owner or admins can update projects.' });
   }
 
   const validated = validateProjectPayload({ ...project, ...req.body });
@@ -502,6 +582,48 @@ app.put('/api/projects/:id', requireAuth, async (req, res) => {
   await writeStore(store);
   emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id });
   return res.json(project);
+});
+
+app.get('/api/projects/:id/updates', async (req, res) => {
+  const store = await readStore();
+  const project = store.projects.find((item) => item.id === req.params.id);
+
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found.' });
+  }
+
+  return res.json(Array.isArray(project.updates) ? project.updates : []);
+});
+
+app.post('/api/projects/:id/updates', requireAuth, async (req, res) => {
+  const store = await readStore();
+  const project = store.projects.find((item) => item.id === req.params.id);
+
+  if (!project) {
+    return res.status(404).json({ message: 'Project not found.' });
+  }
+
+  if (!isAdminUser(req.user) && project.ownerId !== req.user.id) {
+    return res.status(403).json({ message: 'Only the campaign owner or admins can post updates.' });
+  }
+
+  const validated = validateProjectUpdatePayload(req.body);
+  if (validated.error) {
+    return res.status(400).json({ message: validated.error });
+  }
+
+  if (!Array.isArray(project.updates)) {
+    project.updates = [];
+  }
+
+  project.updates.unshift({
+    date: new Date().toISOString().slice(0, 10),
+    content: validated.content,
+  });
+
+  await writeStore(store);
+  emitSyncUpdate({ resource: 'projects', action: 'updated', id: project.id, projectId: project.id });
+  return res.status(201).json(project);
 });
 
 app.delete('/api/projects/:id', requireAuth, requireRole('admin'), async (req, res) => {

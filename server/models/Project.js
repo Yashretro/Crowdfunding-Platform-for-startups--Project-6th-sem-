@@ -12,6 +12,7 @@ const UpdateSchema = new mongoose.Schema({
 
 const ProjectSchema = new mongoose.Schema({
   id: { type: String, index: true, unique: true },
+  ownerId: { type: String, index: true },
   title: String,
   description: String,
   goal: Number,

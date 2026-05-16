@@ -1,5 +1,6 @@
 export interface DefaultProject {
   id: string;
+  ownerId?: string;
   title: string;
   description: string;
   goal: number;
@@ -7,6 +8,7 @@ export interface DefaultProject {
   image: string;
   category: string;
   daysLeft: number;
+  updates?: Array<{ date: string; content: string }>;
 }
 
 export const defaultProjects: DefaultProject[] = [

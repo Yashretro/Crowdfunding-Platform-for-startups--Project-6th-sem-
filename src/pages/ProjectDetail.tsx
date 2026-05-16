@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { investmentService, projectService } from '../services/api';
+import { useEffect, useState, useCallback, type FormEvent } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { investmentService, projectService, userService } from '../services/api';
 import PaymentModal from '../components/PaymentModal';
 import { defaultProjects } from '../data/defaultProjects';
 import { useRealtimeSync } from '../hooks/useRealtimeSync';
@@ -16,6 +16,7 @@ interface TrackedInvestment {
 
 interface Project {
   id: string;
+  ownerId?: string;
   title: string;
   description: string;
   goal: number;
@@ -27,13 +28,29 @@ interface Project {
   updates: Array<{ date: string; content: string }>;
 }
 
+interface UserProfile {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  userType?: string;
+  role?: string;
+  watchlist?: string[];
+}
+
 export default function ProjectDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [projectInvestments, setProjectInvestments] = useState<TrackedInvestment[]>([]);
   const [imageError, setImageError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [investmentAmount, setInvestmentAmount] = useState('');
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [updateText, setUpdateText] = useState('');
+  const [updateSubmitting, setUpdateSubmitting] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
 
   const fetchProject = useCallback(async () => {
     try {
@@ -51,8 +68,49 @@ export default function ProjectDetail() {
     }
   }, [id]);
 
+  const loadProjectInvestments = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      const response = await investmentService.getProjectInvestments(id);
+      const apiData = Array.isArray(response.data) ? response.data : [];
+      const mappedInvestments: TrackedInvestment[] = apiData.map((item) => {
+        const obj = (typeof item === 'object' && item !== null) ? item as Record<string, unknown> : {};
+        return {
+          id: String(obj.id ?? obj._id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+          projectId: String(obj.projectId ?? id),
+          projectTitle: String(obj.projectTitle ?? project?.title ?? 'Project'),
+          amount: Number(obj.amount ?? 0),
+          createdAt: String(obj.createdAt ?? new Date().toISOString()),
+          status: (String(obj.status ?? obj.paymentStatus ?? 'confirmed') as 'pending' | 'confirmed' | 'failed'),
+        };
+      });
+      setProjectInvestments(mappedInvestments);
+    } catch (error) {
+      console.error('Error loading project investments:', error);
+      setProjectInvestments([]);
+    }
+  }, [id, project?.title]);
+
+  const loadProfile = useCallback(async () => {
+    if (!localStorage.getItem('token')) {
+      setProfile(null);
+      return;
+    }
+
+    try {
+      const response = await userService.getProfile();
+      setProfile(response.data as UserProfile);
+      localStorage.setItem('user', JSON.stringify(response.data));
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchProject();
+    loadProfile();
+    loadProjectInvestments();
   }, [fetchProject]);
 
   useRealtimeSync(['projects', 'investments', 'payments'], (event) => {
@@ -61,8 +119,54 @@ export default function ProjectDetail() {
     }
     if (event.resource === 'investments' && event.projectId === id) {
       fetchProject();
+      loadProjectInvestments();
     }
   });
+
+  const isSavedCampaign = Boolean(profile?.watchlist?.includes(id ?? ''));
+  const canManageCampaign = Boolean(
+    profile && project && (profile.role === 'admin' || profile.userType === 'admin' || project.ownerId === profile.id)
+  );
+
+  const toggleSavedCampaign = async () => {
+    if (!id) return;
+
+    if (!profile) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const response = await userService.toggleWatchlist(id);
+      const nextUser = (response.data?.user ?? response.data) as UserProfile;
+      setProfile(nextUser);
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      setActionMessage(response.data?.saved ? 'Campaign saved.' : 'Campaign removed from saved list.');
+    } catch (error) {
+      console.error('Error updating watchlist:', error);
+    }
+  };
+
+  const handlePostUpdate = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!id || !canManageCampaign || !updateText.trim()) return;
+
+    setUpdateSubmitting(true);
+    setActionMessage('');
+
+    try {
+      await projectService.addUpdate(id, { content: updateText.trim() });
+      setUpdateText('');
+      await fetchProject();
+      await loadProjectInvestments();
+      setActionMessage('Update published successfully.');
+    } catch (error) {
+      console.error('Error posting project update:', error);
+      setActionMessage('Could not publish the update right now.');
+    } finally {
+      setUpdateSubmitting(false);
+    }
+  };
 
   const saveTrackedInvestment = (amount: number, status: 'pending' | 'confirmed' | 'failed' = 'confirmed') => {
     if (!project || !id) return;
@@ -135,6 +239,8 @@ export default function ProjectDetail() {
   }
 
   const progressPercentage = Math.min((project.raised / project.goal) * 100, 100);
+  const totalBackers = projectInvestments.length;
+  const recentUpdate = project.updates?.[0] ?? null;
 
   return (
     <div className="min-h-screen">
@@ -173,8 +279,43 @@ export default function ProjectDetail() {
               <p className="text-slate-700 whitespace-pre-wrap">{project.description}</p>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+              <div className="card">
+                <p className="telemetry-label mb-1">Backers</p>
+                <p className="text-3xl font-bold text-slate-900">{totalBackers}</p>
+              </div>
+              <div className="card">
+                <p className="telemetry-label mb-1">Updates</p>
+                <p className="text-3xl font-bold text-slate-900">{project.updates?.length || 0}</p>
+              </div>
+              <div className="card">
+                <p className="telemetry-label mb-1">Saved</p>
+                <p className="text-3xl font-bold text-slate-900">{isSavedCampaign ? 'Yes' : 'No'}</p>
+              </div>
+            </div>
+
             <div className="card">
               <h2 className="text-2xl font-bold text-slate-900 mb-4">Updates</h2>
+              {actionMessage && (
+                <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50/90 px-4 py-3 text-sky-800">
+                  {actionMessage}
+                </div>
+              )}
+
+              {canManageCampaign && (
+                <form onSubmit={handlePostUpdate} className="mb-6 space-y-3">
+                  <textarea
+                    className="glass-input min-h-28"
+                    value={updateText}
+                    onChange={(event) => setUpdateText(event.target.value)}
+                    placeholder="Share a milestone, progress note, or investor update..."
+                  />
+                  <button type="submit" disabled={updateSubmitting} className="btn-primary disabled:opacity-60">
+                    {updateSubmitting ? 'Publishing...' : 'Publish Update'}
+                  </button>
+                </form>
+              )}
+
               {project.updates && project.updates.length > 0 ? (
                 <div className="space-y-4">
                   {project.updates.map((update, index) => (
@@ -186,6 +327,11 @@ export default function ProjectDetail() {
                 </div>
               ) : (
                 <p className="text-slate-600">No updates yet</p>
+              )}
+              {recentUpdate && (
+                <p className="mt-4 text-sm text-slate-500">
+                  Latest update: {recentUpdate.date}
+                </p>
               )}
             </div>
           </div>
@@ -214,9 +360,23 @@ export default function ProjectDetail() {
                   <p className="text-sm text-slate-600">Days Left</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-slate-900">1.2K</p>
+                  <p className="text-2xl font-bold text-slate-900">{totalBackers}</p>
                   <p className="text-sm text-slate-600">Backers</p>
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={toggleSavedCampaign}
+                  className={`w-full rounded-xl px-4 py-3 font-semibold transition ${
+                    isSavedCampaign
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-white/45 text-slate-700 border border-white/70 hover:bg-white/70'
+                  }`}
+                >
+                  {profile ? (isSavedCampaign ? 'Saved Campaign' : 'Save Campaign') : 'Sign in to save campaign'}
+                </button>
               </div>
 
               <div className="space-y-3 mb-6">

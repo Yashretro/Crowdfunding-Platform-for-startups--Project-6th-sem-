@@ -30,6 +30,10 @@ export interface ProjectCreate {
   featured?: boolean;
 }
 
+export interface CampaignUpdateCreate {
+  content: string;
+}
+
 export interface RegisterData {
   firstName?: string;
   lastName?: string;
@@ -66,8 +70,10 @@ export interface PaymentVerify {
 export const projectService = {
   getAll: (filters?: ProjectFilters) => apiClient.get<unknown>('/projects', { params: filters }),
   getById: (id: string) => apiClient.get<unknown>(`/projects/${id}`),
+  getUpdates: (id: string) => apiClient.get<unknown>(`/projects/${id}/updates`),
   create: (data: ProjectCreate) => apiClient.post('/projects', data),
   update: (id: string, data: ProjectCreate) => apiClient.put(`/projects/${id}`, data),
+  addUpdate: (id: string, data: CampaignUpdateCreate) => apiClient.post(`/projects/${id}/updates`, data),
   delete: (id: string) => apiClient.delete(`/projects/${id}`),
 };
 
@@ -76,6 +82,8 @@ export const userService = {
   login: (data: LoginData) => apiClient.post('/auth/login', data),
   getProfile: () => apiClient.get('/users/profile'),
   updateProfile: (data: ProfileUpdate) => apiClient.put('/users/profile', data),
+  getWatchlist: () => apiClient.get('/users/watchlist'),
+  toggleWatchlist: (projectId: string) => apiClient.post(`/users/watchlist/${projectId}`),
 };
 
 export const investmentService = {

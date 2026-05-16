@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { projectService } from '../services/api';
+import { projectService, userService } from '../services/api';
 import { defaultProjects, type DefaultProject } from '../data/defaultProjects';
 import { useRealtimeSync } from '../hooks/useRealtimeSync';
 
@@ -13,6 +13,8 @@ export default function Projects() {
   const [category, setCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('trending');
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [watchlistLoading, setWatchlistLoading] = useState(false);
 
   const categories = ['all', 'Clean Tech', 'Health Tech', 'EdTech', 'Food Tech', 'Entertainment', 'Finance'];
 
@@ -46,6 +48,30 @@ export default function Projects() {
   }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setWatchlist([]);
+      return;
+    }
+
+    const loadWatchlist = async () => {
+      setWatchlistLoading(true);
+      try {
+        const response = await userService.getProfile();
+        const profile = response.data as { watchlist?: string[] };
+        setWatchlist(Array.isArray(profile.watchlist) ? profile.watchlist : []);
+        localStorage.setItem('user', JSON.stringify(response.data));
+      } catch (error) {
+        console.error('Error loading watchlist:', error);
+      } finally {
+        setWatchlistLoading(false);
+      }
+    };
+
+    loadWatchlist();
+  }, []);
+
+  useEffect(() => {
     filterAndSortProjects();
   }, [filterAndSortProjects]);
 
@@ -67,6 +93,23 @@ export default function Projects() {
     setCategory('all');
     setSearchTerm('');
     setSortBy('trending');
+  };
+
+  const toggleWatchlist = async (projectId: string) => {
+    if (!localStorage.getItem('token')) {
+      return;
+    }
+
+    try {
+      const response = await userService.toggleWatchlist(projectId);
+      const nextWatchlist = Array.isArray(response.data?.watchlist) ? response.data.watchlist : [];
+      setWatchlist(nextWatchlist);
+      if (response.data?.user) {
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+    } catch (error) {
+      console.error('Error updating watchlist:', error);
+    }
   };
 
   const fetchProjects = async () => {
@@ -236,6 +279,21 @@ export default function Projects() {
                     <span className="text-slate-600">{project.daysLeft} days left</span>
                     <span className="text-sky-700 font-semibold">{Math.round((project.raised / project.goal) * 100)}% funded</span>
                   </div>
+
+                  {localStorage.getItem('token') && (
+                    <button
+                      type="button"
+                      onClick={() => toggleWatchlist(project.id)}
+                      disabled={watchlistLoading}
+                      className={`w-full mb-3 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        watchlist.includes(project.id)
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-white/45 text-slate-700 border border-white/70 hover:bg-white/70'
+                      } disabled:opacity-60 disabled:cursor-not-allowed`}
+                    >
+                      {watchlist.includes(project.id) ? 'Saved Campaign' : 'Save Campaign'}
+                    </button>
+                  )}
 
                   <Link
                     to={`/projects/${project.id}`}
