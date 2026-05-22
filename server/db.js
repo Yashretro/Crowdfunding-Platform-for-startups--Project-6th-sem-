@@ -15,20 +15,29 @@ export async function connectDB(uri) {
 export async function seedFromFileIfEmpty(models) {
   const storePath = join(__dirname, 'data', 'store.json');
   try {
-    const usersCount = await models.User.countDocuments();
-    if (usersCount > 0) return;
     const content = await readFile(storePath, 'utf-8');
     const store = JSON.parse(content);
-    if (Array.isArray(store.users)) {
+
+    const usersCount = await models.User.countDocuments();
+    if (usersCount === 0 && Array.isArray(store.users)) {
       await models.User.insertMany(store.users);
     }
+
     if (Array.isArray(store.projects)) {
-      await models.Project.insertMany(store.projects);
+      const existingProjects = await models.Project.find({}, { id: 1, _id: 0 }).lean();
+      const existingProjectIds = new Set(existingProjects.map((project) => project.id));
+      const missingProjects = store.projects.filter((project) => project && project.id && !existingProjectIds.has(project.id));
+
+      if (missingProjects.length > 0) {
+        await models.Project.insertMany(missingProjects);
+      }
     }
-    if (Array.isArray(store.investments)) {
+
+    if (usersCount === 0 && Array.isArray(store.investments)) {
       await models.Investment.insertMany(store.investments);
     }
-    console.log('Seeded MongoDB from store.json');
+
+    console.log('Synced MongoDB seeds from store.json');
   } catch (err) {
     console.warn('Seeding skipped or failed:', err.message);
   }
