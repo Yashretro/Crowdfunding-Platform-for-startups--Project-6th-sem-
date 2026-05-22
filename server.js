@@ -173,8 +173,8 @@ function validateAuthPayload(body) {
     return { error: 'Invalid email format.' };
   }
 
-  if (password.length < 8) {
-    return { error: 'Password must be at least 8 characters.' };
+  if (password.length < 4) {
+    return { error: 'Password must be at least 4 characters.' };
   }
 
   return { firstName, lastName, email, password, userType };

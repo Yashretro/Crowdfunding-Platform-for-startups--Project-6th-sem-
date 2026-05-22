@@ -126,10 +126,12 @@ export default function Signup() {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder="Enter a simple password"
+              minLength={4}
               required
               className="glass-input"
             />
+            <p className="mt-1 text-xs text-slate-500">Use at least 4 characters. Keep it simple if you want easier login.</p>
           </div>
 
           <div>
@@ -139,7 +141,7 @@ export default function Signup() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
-              placeholder="••••••••"
+              placeholder="Re-enter password"
               required
               className="glass-input"
             />
