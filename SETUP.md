@@ -154,4 +154,3 @@ Optional: If you'd like to deploy backend alongside frontend, consider container
 
 ---
 
-If you want, I can also commit and push this `SETUP.md` and add a minimal `vercel.json` or `Dockerfile` for production. Which would you like next?

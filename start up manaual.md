@@ -169,7 +169,4 @@ npm run preview
 - Push code changes to GitHub before redeploying
 - Use Railway and Vercel auto-deploy from the main branch
 
-## Notes
 
-- The file name is intentionally kept as requested.
-- If you want, this manual can also be copied into a nicer `README.md` section later.
