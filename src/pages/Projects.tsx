@@ -263,7 +263,7 @@ export default function Projects() {
 
                   <div className="mb-4">
                     <div className="flex justify-between text-sm text-slate-600 mb-2">
-                      <span>${project.raised.toLocaleString()}</span>
+                      <span>₹{project.raised.toLocaleString('en-IN')}</span>
                       <span>{Math.round((project.raised / project.goal) * 100)}%</span>
                     </div>
                     <div className="w-full bg-white/60 rounded-full h-2">
@@ -272,7 +272,7 @@ export default function Projects() {
                         style={{ width: `${Math.min((project.raised / project.goal) * 100, 100)}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-slate-600 mt-2">of ${project.goal.toLocaleString()} goal</p>
+                    <p className="text-sm text-slate-600 mt-2">of ₹{project.goal.toLocaleString('en-IN')} goal</p>
                   </div>
 
                   <div className="flex justify-between items-center mb-4 text-sm">
