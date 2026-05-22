@@ -236,6 +236,43 @@ function validateProjectUpdatePayload(body) {
   return { content };
 }
 
+function isBcryptHash(value) {
+  return typeof value === 'string' && /^\$2[aby]\$/.test(value);
+}
+
+function isPasswordValid(candidatePassword, storedPassword) {
+  if (!candidatePassword || !storedPassword) return false;
+
+  if (isBcryptHash(storedPassword)) {
+    try {
+      return bcrypt.compareSync(candidatePassword, storedPassword);
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  return candidatePassword === storedPassword;
+}
+
+async function upgradeLegacyPassword(userId, plainPassword) {
+  const hashedPassword = bcrypt.hashSync(plainPassword, 10);
+
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    await User.updateOne({ id: userId }, { $set: { password: hashedPassword } });
+    return hashedPassword;
+  }
+
+  const store = await readStore();
+  const userIndex = store.users.findIndex((user) => user.id === userId);
+
+  if (userIndex >= 0) {
+    store.users[userIndex].password = hashedPassword;
+    await writeStore(store);
+  }
+
+  return hashedPassword;
+}
+
 function isAdminUser(user) {
   return Boolean(user && (user.role === 'admin' || user.userType === 'admin'));
 }
@@ -416,8 +453,14 @@ app.post('/api/auth/login', async (req, res) => {
   const store = await readStore();
   const user = store.users.find((item) => item.email.toLowerCase() === email);
   if (!user) return res.status(401).json({ message: 'Invalid email or password.' });
-  const match = bcrypt.compareSync(password, user.password);
+
+  const match = isPasswordValid(password, user.password);
   if (!match) return res.status(401).json({ message: 'Invalid email or password.' });
+
+  if (!isBcryptHash(user.password)) {
+    user.password = await upgradeLegacyPassword(user.id, password);
+  }
+
   return res.json({ token: createToken(user.id), user: publicUser(user) });
 });
 
